@@ -71,8 +71,8 @@ void jumpHeader(FILE* tableFileReference);
 char* getFormatedDate(char* date);
 void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* vehicleRegister);
 void readVehicleRegistersFromBinaryTableWithCondition(FILE* tableFileReference, vehicle_t* vehicleRegister, char* fieldName, char* value);
-
-
+void readVehicleRegisterBIN(FILE* tableFileReference, vehicle_t* vehicleRegister);
+void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,char* value);
 
 void createVehicleTable(char *dataFileName, char *tableFileName)
 {
@@ -335,19 +335,7 @@ void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* ve
 
   while ( fread(vehicleRegister->removido, sizeof(char), 1, tableFileReference) != 0)
   {
-    fread(&vehicleRegister->tamanhoRegistro, sizeof(int), 1, tableFileReference);
-    fread(vehicleRegister->prefixo, sizeof(char), TAMANHO_PREFIXO, tableFileReference);
-    vehicleRegister->prefixo[TAMANHO_PREFIXO] = '\0';
-    fread(vehicleRegister->data, sizeof(char), TAMANHO_DATA, tableFileReference);
-    vehicleRegister->data[TAMANHO_DATA] = '\0';
-    fread(&vehicleRegister->quantidadeDeLugares, sizeof(int), 1, tableFileReference);
-    fread(&vehicleRegister->codigoLinha, sizeof(int), 1, tableFileReference);
-    fread(&vehicleRegister->tamanhoModelo, sizeof(int), 1, tableFileReference);
-    fread(vehicleRegister->modelo, sizeof(char), vehicleRegister->tamanhoModelo, tableFileReference);
-    vehicleRegister->modelo[vehicleRegister->tamanhoModelo] = '\0';
-    fread(&vehicleRegister->tamanhoCategoria, sizeof(int), 1, tableFileReference);
-    fread(vehicleRegister->categoria, sizeof(char), vehicleRegister->tamanhoCategoria, tableFileReference);
-    vehicleRegister->categoria[vehicleRegister->tamanhoCategoria] = '\0';
+    readVehicleRegisterBIN(tableFileReference, vehicleRegister);
         
     printVehicleRegister(vehicleRegister);
   }
@@ -492,55 +480,78 @@ void readVehicleRegistersFromBinaryTableWithCondition
 {
   while ( fread(vehicleRegister->removido, sizeof(char), 1, tableFileReference) != 0)
   {
-    fread(&vehicleRegister->tamanhoRegistro, sizeof(int), 1, tableFileReference);
-    fread(vehicleRegister->prefixo, sizeof(char), TAMANHO_PREFIXO, tableFileReference);
-    vehicleRegister->prefixo[TAMANHO_PREFIXO] = '\0';
-    fread(vehicleRegister->data, sizeof(char), TAMANHO_DATA, tableFileReference);
-    vehicleRegister->data[TAMANHO_DATA] = '\0';
-    fread(&vehicleRegister->quantidadeDeLugares, sizeof(int), 1, tableFileReference);
-    fread(&vehicleRegister->codigoLinha, sizeof(int), 1, tableFileReference);
-    fread(&vehicleRegister->tamanhoModelo, sizeof(int), 1, tableFileReference);
-    fread(vehicleRegister->modelo, sizeof(char), vehicleRegister->tamanhoModelo, tableFileReference);
-    vehicleRegister->modelo[vehicleRegister->tamanhoModelo] = '\0';
-    fread(&vehicleRegister->tamanhoCategoria, sizeof(int), 1, tableFileReference);
-    fread(vehicleRegister->categoria, sizeof(char), vehicleRegister->tamanhoCategoria, tableFileReference);
-    vehicleRegister->categoria[vehicleRegister->tamanhoCategoria] = '\0';
-    
+    readVehicleRegisterBIN(tableFileReference, vehicleRegister);    
 
-    if (strcmp(fieldName, "prefixo") == 0)
+    printVehicleRegisterSelectedBy(vehicleRegister, fieldName, value);
+  }
+}
+
+void readVehicleRegisterBIN(FILE* tableFileReference, vehicle_t* vehicleRegister)
+{
+  fread(&vehicleRegister->tamanhoRegistro, sizeof(int), 1, tableFileReference);
+  fread(vehicleRegister->prefixo, sizeof(char), TAMANHO_PREFIXO, tableFileReference);
+  vehicleRegister->prefixo[TAMANHO_PREFIXO] = '\0';
+  fread(vehicleRegister->data, sizeof(char), TAMANHO_DATA, tableFileReference);
+  vehicleRegister->data[TAMANHO_DATA] = '\0';
+  fread(&vehicleRegister->quantidadeDeLugares, sizeof(int), 1, tableFileReference);
+  fread(&vehicleRegister->codigoLinha, sizeof(int), 1, tableFileReference);
+  fread(&vehicleRegister->tamanhoModelo, sizeof(int), 1, tableFileReference);
+  fread(vehicleRegister->modelo, sizeof(char), vehicleRegister->tamanhoModelo, tableFileReference);
+  vehicleRegister->modelo[vehicleRegister->tamanhoModelo] = '\0';
+  fread(&vehicleRegister->tamanhoCategoria, sizeof(int), 1, tableFileReference);
+  fread(vehicleRegister->categoria, sizeof(char), vehicleRegister->tamanhoCategoria, tableFileReference);
+  vehicleRegister->categoria[vehicleRegister->tamanhoCategoria] = '\0';
+}
+
+void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,char* value)
+{
+  if (strcmp(fieldName, "prefixo") == 0)
+  {
+    if(strcmp(vehicleRegister->prefixo, value) == 0)
     {
-      if(strcmp(vehicleRegister->prefixo, value) == 0)
-      {
-        printVehicleRegister(vehicleRegister);
-      }
+      printVehicleRegister(vehicleRegister);
     }
-    if (strcmp(fieldName, "data") == 0)
+  }
+  if (strcmp(fieldName, "data") == 0)
+  {
+    if(strcmp(vehicleRegister->data, value) == 0)
     {
-      if(strcmp(vehicleRegister->data, value) == 0)
-      {
-        printVehicleRegister(vehicleRegister);
-      }
+      printVehicleRegister(vehicleRegister);
     }
-    if (strcmp(fieldName, "quantidadeLugares") == 0)
+  }
+  if (strcmp(fieldName, "quantidadeLugares") == 0)
+  {
+    if(vehicleRegister->quantidadeDeLugares == atoi(value))
     {
-      if(vehicleRegister->quantidadeDeLugares == atoi(value))
-      {
-        printVehicleRegister(vehicleRegister);
-      }
+      printVehicleRegister(vehicleRegister);
     }
-    if (strcmp(fieldName, "modelos") == 0)
+  }
+  if (strcmp(fieldName, "modelos") == 0)
+  {
+    if(strcmp(vehicleRegister->modelo, value) == 0)
     {
-      if(strcmp(vehicleRegister->modelo, value) == 0)
-      {
-        printVehicleRegister(vehicleRegister);
-      }
+      printVehicleRegister(vehicleRegister);
     }
-    if (strcmp(fieldName, "categoria") == 0)
+  }
+  if (strcmp(fieldName, "categoria") == 0)
+  {
+    if(strcmp(vehicleRegister->categoria, value) == 0)
     {
-      if(strcmp(vehicleRegister->categoria, value) == 0)
-      {
-        printVehicleRegister(vehicleRegister);
-      }
+      printVehicleRegister(vehicleRegister);
     }
   }
 }
+// void insertVehicleRegisterIntoTable(char* tableFileName, vehicle_t** vehicleRegisters, int numberOfRegisters)
+// {
+//   FILE* tableFileReference = fopen(tableFileName, "rb+");
+//   fileDidOpen(tableFileReference, "Falha no processamento do arquivo.\n");
+
+//   goToFileEnd(tableFileName);
+ 
+//   for (int i = 0; i < numberOfRegisters; i++)
+//   {
+//     writeVehicleRegister(tableFileReference, vehicleRegisters[i]);
+//   }
+  
+//   fclose(tableFileReference);
+// }
