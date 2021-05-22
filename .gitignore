@@ -1,0 +1,6 @@
+*.out
+*.txt
+*.o
+.vscode
+/Tests
+*.bin

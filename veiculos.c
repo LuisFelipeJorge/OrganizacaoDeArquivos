@@ -66,8 +66,10 @@ void goToFileEnd(FILE* fileReference);
 void writeHeader(FILE* tableFileReference, cabecalho_t* cabecalho);
 void goToFileStart(FILE* fileReference);
 void getDataNula(char* data);
-
-
+int isNullRegister(FILE* tableFileReference);
+void jumpHeader(FILE* tableFileReference);
+char* getFormatedDate(char* date);
+void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* vehicleRegister);
 
 
 
@@ -75,10 +77,10 @@ void getDataNula(char* data);
 void createVehicleTable(char *dataFileName, char *tableFileName)
 {
   FILE* dataFileReference = fopen(dataFileName, "r");    
-  fileDidOpen(dataFileReference);
+  fileDidOpen(dataFileReference, "Falha no processamento do arquivo");
   
   FILE* tableFileReference = fopen(tableFileName, "rb+");
-  fileDidOpen(tableFileReference);
+  fileDidOpen(tableFileReference, "Falha no processamento do arquivo");
 
   char **headerFields = readHeader(dataFileReference);
   fseek(tableFileReference, HEADER_SIZE+1, SEEK_SET);
@@ -238,20 +240,6 @@ int calculateTamanhoDoRegistro(vehicle_t* vehicleRegister)
   );
 }
 
-void printVehicleRegister(vehicle_t* vehicleRegister)
-{
-  printf("prefixo: %s\n", vehicleRegister->prefixo);
-  printf("data: %s\n", vehicleRegister->data);
-  printf("qtd de lugares: %d\n", vehicleRegister->quantidadeDeLugares);
-  printf("cod da linha: %d\n", vehicleRegister->codigoLinha);
-  printf("modelo: %s\n", vehicleRegister->modelo);
-  printf("categoria: %s\n", vehicleRegister->categoria);
-  printf("removido: %s\n", vehicleRegister->removido);
-  printf("tamanho do reg: %d\n", vehicleRegister->tamanhoRegistro);
-  printf("tamanho do mod: %d\n", vehicleRegister->tamanhoModelo);
-  printf("tamanho da categ: %d\n", vehicleRegister->tamanhoCategoria);
-}
-
 void writeVehicleRegister(FILE* tableFileReference,vehicle_t* vehicleRegister)
 {
   fwrite(vehicleRegister->removido, sizeof(char), TAMANHO_REMOVIDO, tableFileReference);
@@ -311,4 +299,170 @@ void writeHeader(FILE* tableFileReference, cabecalho_t* cabecalho)
 void goToFileStart(FILE* fileReference)
 {
   fseek(fileReference, 0, SEEK_SET);
+}
+
+void selectVehicleRegistersFrom(char* tableFileName) 
+{
+  FILE* tableFileReference = fopen(tableFileName, "rb");
+  fileDidOpen(tableFileReference, "Falha no processamento do arquivo");
+
+  if(isNullRegister(tableFileReference)){ printf("Registro inexistente.\n"); }
+  jumpHeader(tableFileReference);
+
+  vehicle_t* vehicleRegister = createVehicleRegister();
+
+  readVehicleRegistersFromBinaryTable(tableFileReference, vehicleRegister);
+
+  fclose(tableFileReference);
+}
+
+int isNullRegister(FILE* tableFileReference)
+{
+  fseek(tableFileReference, 1, SEEK_SET);
+  long long byteProxRegistro;
+  fread(&byteProxRegistro, sizeof(long long), 1, tableFileReference);
+  fseek(tableFileReference, 0, SEEK_SET);
+  return (byteProxRegistro <=175);
+}
+
+void jumpHeader(FILE* tableFileReference) 
+{
+  fseek(tableFileReference, HEADER_SIZE+1, SEEK_SET);
+}
+
+void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* vehicleRegister)
+{
+
+  while ( fread(vehicleRegister->removido, sizeof(char), 1, tableFileReference) != 0)
+  {
+    fread(&vehicleRegister->tamanhoRegistro, sizeof(int), 1, tableFileReference);
+    fread(vehicleRegister->prefixo, sizeof(char), TAMANHO_PREFIXO, tableFileReference);
+    vehicleRegister->prefixo[TAMANHO_PREFIXO] = '\0';
+    fread(vehicleRegister->data, sizeof(char), TAMANHO_DATA, tableFileReference);
+    vehicleRegister->data[TAMANHO_DATA] = '\0';
+    fread(&vehicleRegister->quantidadeDeLugares, sizeof(int), 1, tableFileReference);
+    fread(&vehicleRegister->codigoLinha, sizeof(int), 1, tableFileReference);
+    fread(&vehicleRegister->tamanhoModelo, sizeof(int), 1, tableFileReference);
+    fread(vehicleRegister->modelo, sizeof(char), vehicleRegister->tamanhoModelo, tableFileReference);
+    vehicleRegister->modelo[vehicleRegister->tamanhoModelo] = '\0';
+    fread(&vehicleRegister->tamanhoCategoria, sizeof(int), 1, tableFileReference);
+    fread(vehicleRegister->categoria, sizeof(char), vehicleRegister->tamanhoCategoria, tableFileReference);
+    vehicleRegister->categoria[vehicleRegister->tamanhoCategoria] = '\0';
+        
+    printVehicleRegister(vehicleRegister);
+  }
+}
+
+void printVehicleRegister(vehicle_t* vehicleRegister)
+{
+
+  if (vehicleRegister->removido[0] == '1')
+  {
+    printf("Prefixo do veiculo: %s\n", vehicleRegister->prefixo);
+    if(vehicleRegister->tamanhoModelo != 0)
+    {
+      printf("Modelo do veiculo: %s\n", vehicleRegister->modelo);
+    }else
+    {
+      printf("Modelo do veiculo: campo com valor nulo\n");
+    }
+    if(vehicleRegister->tamanhoCategoria != 0)
+    {
+      printf("Categoria do veiculo: %s\n", vehicleRegister->categoria);
+    }else
+    {
+      printf("Categoria do veiculo: campo com valor nulo\n");
+    }
+    if (strlen(vehicleRegister->data) != 0)
+    {
+      printf("Data de entrada do veiculo na frota: %s\n", getFormatedDate(vehicleRegister->data));
+    }else
+    {
+      printf("Data de entrada do veiculo na frota: campo com valor nulo\n");
+    }
+    if(vehicleRegister->quantidadeDeLugares != -1)
+    {
+      printf("Quantidade de lugares sentados disponiveis: %d\n", vehicleRegister->quantidadeDeLugares);
+    }else
+    {
+      printf("Quantidade de lugares sentados disponiveis: campo com valor nulo\n");
+    }
+
+    printf("\n");
+  }
+}
+
+char* getFormatedDate(char* date)
+{
+  char** dateFields = splitString(date, 3, "-");
+  int month = atoi(dateFields[1]);
+  char* dateString = (char*)malloc(sizeof(char)*(STRING_SIZE/4));
+  char monthName[10];
+  switch (month)
+  {
+    case 1:
+      strcpy(monthName, "janeiro");
+      break;
+
+    case 2:
+      strcpy(monthName, "fevereiro");
+      break;
+
+    case 3:
+      strcpy(monthName, "março");
+      break;
+
+    case 4:
+      strcpy(monthName, "abril");
+      break;
+
+    case 5:
+      strcpy(monthName, "maio");
+      break;
+
+    case 6:
+      strcpy(monthName, "junho");
+      break;
+
+    case 7:
+      strcpy(monthName, "julho");
+      break;
+
+    case 8:
+      strcpy(monthName, "agosto");
+      break;
+
+    case 9:
+      strcpy(monthName, "setembro");
+      break;
+
+    case 10:
+      strcpy(monthName, "outubro");
+      break;
+
+    case 11:
+      strcpy(monthName, "novembro");
+      break;
+
+    case 12:
+      strcpy(monthName, "dezembro");
+      break;    
+
+    default:
+      break;
+  }
+
+  char day[3];
+  strcpy(day, dateFields[2]);
+  char year[5];
+  strcpy(year, dateFields[0]);
+
+
+  strcat(dateString, day);
+  strcat(dateString, " de ");
+  strcat(dateString, monthName);
+  strcat(dateString, " de ");
+  strcat(dateString, year);
+  
+  return dateString;
 }

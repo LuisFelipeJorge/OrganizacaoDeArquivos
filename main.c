@@ -9,13 +9,11 @@
 
 int main(int argc, char const *argv[])
 {
-    char dataFileName[STRING_SIZE];
-    char registersFileName[STRING_SIZE];
+    char binaryFileName[STRING_SIZE];
 
-    getFileName(dataFileName);
-    getFileName(registersFileName);
-    
-    createVehicleTable(dataFileName, registersFileName);
-    binarioNaTela(registersFileName);    
+    getFileName(binaryFileName);
+
+    selectVehicleRegistersFrom(binaryFileName);
+       
     return 0;
 }

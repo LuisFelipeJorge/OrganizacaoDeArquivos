@@ -11,10 +11,10 @@ void getFileName(char *fileName)
   scanf("%s", fileName);
 }
 
-void fileDidOpen(FILE* fileRefence) {
+void fileDidOpen(FILE* fileRefence, char* errorMessage) {
   if (!fileRefence) 
   {
-    perror("fopen");
+    perror(errorMessage);
     exit(EXIT_FAILURE);
   }
 }
