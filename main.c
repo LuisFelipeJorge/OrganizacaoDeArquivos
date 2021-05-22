@@ -12,8 +12,11 @@ int main(int argc, char const *argv[])
     char binaryFileName[STRING_SIZE];
 
     getFileName(binaryFileName);
-
-    selectVehicleRegistersFrom(binaryFileName);
+    char campo[STRING_SIZE/2];
+    char valor[STRING_SIZE/2];
+    scanf("%s", campo);
+    scan_quote_string(valor);
+    selectVehicleRegistersFromWhere(binaryFileName, campo, valor);
        
     return 0;
 }
