@@ -5,8 +5,8 @@ typedef struct vehicle vehicle_t;
 vehicle_t* createVehicleRegister();
 void insertVehicleDataInStructure(char** vehicleDataFields, vehicle_t* vehicleRegister);
 void printVehicleRegister(vehicle_t* vehicleRegister);
-void createVehicleTable(char *dataFileName, char *tableFileName);
+int createVehicleTable(char *dataFileName, char *tableFileName);
 void selectVehicleRegistersFrom(char* tableFileName);
 void selectVehicleRegistersFromWhere(char* tableFileName, char* fieldName, char* value);
-void insertVehicleRegisterIntoTable(char* tableFileName, vehicle_t** vehicleRegisters, int numberOfRegisters);
+int insertVehicleRegisterIntoTable(char* tableFileName, vehicle_t** vehicleRegisters, int numberOfRegisters);
 

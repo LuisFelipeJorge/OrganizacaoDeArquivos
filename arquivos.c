@@ -12,12 +12,12 @@ void getFileName(char *fileName)
   scanf("%s", fileName);
 }
 
-void fileDidOpen(FILE* fileRefence, char* errorMessage) {
+int fileDidOpen(FILE* fileRefence, char* errorMessage) {
   if (!fileRefence) 
   {
-    perror(errorMessage);
-    exit(EXIT_FAILURE);
-  }
+    printf("%s\n", errorMessage);
+    return 0;
+  } return 1;
 }
 
 char **splitString(char *string, int numberOfFields, char *delimeter)

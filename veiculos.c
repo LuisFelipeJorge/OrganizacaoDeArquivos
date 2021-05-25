@@ -53,6 +53,8 @@ struct vehicle
 char** readHeader(FILE *dataFileReference);
 void freeHeader(char **header, int numberOfFields);
 char* readVehicleRegister(FILE* dataFileReference, vehicle_t* vehicleRegister);
+void setStatus(FILE* fileReference, int status);
+char getStatus(FILE* fileReference);
 int isNullField(char* field);
 int calculateTamanhoDoRegistro(vehicle_t* vehicleRegister);
 void writeVehicleRegister(FILE* tableFileReference,vehicle_t* vehicleRegister);
@@ -63,21 +65,31 @@ void writeHeader(FILE* tableFileReference, cabecalho_t* cabecalho);
 void goToFileStart(FILE* fileReference);
 void getDataNula(char* data);
 int isNullRegister(FILE* tableFileReference);
+long long getByteOffset(FILE* tableFileReference);
 void jumpHeader(FILE* tableFileReference);
 char* getFormatedDate(char* date);
 void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* vehicleRegister);
 void readVehicleRegistersFromBinaryTableWithCondition(FILE* tableFileReference, vehicle_t* vehicleRegister, char* fieldName, char* value);
 void readVehicleRegisterBIN(FILE* tableFileReference, vehicle_t* vehicleRegister);
 void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,char* value);
-void setHeader(FILE* fileReference, int numberOfRegisters);
+void setByteOffset(FILE* tableFileReference, long long byteOffset);
+int getNroDeRegistros(FILE* tableFileReference);
+void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
 
-void createVehicleTable(char *dataFileName, char *tableFileName)
+
+int createVehicleTable(char *dataFileName, char *tableFileName)
 {
-  FILE* dataFileReference = fopen(dataFileName, "r");    
-  fileDidOpen(dataFileReference, "Falha no processamento do arquivo");
-  
-  FILE* tableFileReference = fopen(tableFileName, "rb+");
-  fileDidOpen(tableFileReference, "Falha no processamento do arquivo");
+  FILE* dataFileReference = fopen(dataFileName, "r");   
+  if(!fileDidOpen(dataFileReference, "Falha no processamento do arquivo."))
+  {
+    return 0;
+  } 
+    
+  FILE* tableFileReference = fopen(tableFileName, "wb+");
+  if (!fileDidOpen(tableFileReference, "Falha no processamento do arquivo."))
+  {
+    return 0;
+  }
 
   char **headerFields = readHeader(dataFileReference);
   fseek(tableFileReference, HEADER_SIZE+1, SEEK_SET);
@@ -103,6 +115,8 @@ void createVehicleTable(char *dataFileName, char *tableFileName)
 
   fclose(dataFileReference);
   fclose(tableFileReference);
+
+  return 1;
 }
 
 vehicle_t* createVehicleRegister()
@@ -301,25 +315,53 @@ void goToFileStart(FILE* fileReference)
 void selectVehicleRegistersFrom(char* tableFileName) 
 {
   FILE* tableFileReference = fopen(tableFileName, "rb");
-  fileDidOpen(tableFileReference, "Falha no processamento do arquivo");
+  fileDidOpen(tableFileReference, "Falha no processamento do arquivo.");
 
-  if(isNullRegister(tableFileReference)){ printf("Registro inexistente.\n"); }
-  jumpHeader(tableFileReference);
+  if(isNullRegister(tableFileReference))
+  { 
+    printf("Registro inexistente.\n"); 
+  } else
+  {
+    jumpHeader(tableFileReference);
 
-  vehicle_t* vehicleRegister = createVehicleRegister();
+    vehicle_t* vehicleRegister = createVehicleRegister();
 
-  readVehicleRegistersFromBinaryTable(tableFileReference, vehicleRegister);
+    readVehicleRegistersFromBinaryTable(tableFileReference, vehicleRegister);
+  }
 
   fclose(tableFileReference);
 }
 
+void setStatus(FILE* fileReference, int status)
+{
+  goToFileStart(fileReference);
+  fwrite(&status, sizeof(char), 1, fileReference);
+  goToFileStart(fileReference);
+}
+
+char getStatus(FILE* fileReference)
+{
+  char status;
+  goToFileStart(fileReference);
+  fread(&status, sizeof(char), 1, fileReference);
+  goToFileStart(fileReference);
+  return status;
+}
+
 int isNullRegister(FILE* tableFileReference)
+{
+  long long byteProxRegistro = getByteOffset(tableFileReference);
+  fread(&byteProxRegistro, sizeof(long long), 1, tableFileReference);
+  goToFileStart(tableFileReference);
+  return (byteProxRegistro <=175);
+}
+
+long long getByteOffset(FILE* tableFileReference)
 {
   fseek(tableFileReference, 1, SEEK_SET);
   long long byteProxRegistro;
   fread(&byteProxRegistro, sizeof(long long), 1, tableFileReference);
-  fseek(tableFileReference, 0, SEEK_SET);
-  return (byteProxRegistro <=175);
+  return byteProxRegistro;
 }
 
 void jumpHeader(FILE* tableFileReference) 
@@ -455,15 +497,23 @@ char* getFormatedDate(char* date)
 void selectVehicleRegistersFromWhere(char* tableFileName, char* fieldName, char* value) 
 {
   FILE* tableFileReference = fopen(tableFileName, "rb");
-  fileDidOpen(tableFileReference, "Falha no processamento do arquivo");
+  fileDidOpen(tableFileReference, "Falha no processamento do arquivo.");
 
-  if(isNullRegister(tableFileReference)){ printf("Registro inexistente.\n"); }
-  jumpHeader(tableFileReference);
+  setStatus(tableFileReference, '0');
 
-  vehicle_t* vehicleRegister = createVehicleRegister();
+  if(isNullRegister(tableFileReference))
+  { 
+    printf("Registro inexistente.\n"); 
+  } else 
+  {
+    jumpHeader(tableFileReference);
 
-  readVehicleRegistersFromBinaryTableWithCondition(tableFileReference, vehicleRegister, fieldName, value);
+    vehicle_t* vehicleRegister = createVehicleRegister();
 
+    readVehicleRegistersFromBinaryTableWithCondition(tableFileReference, vehicleRegister, fieldName, value);
+  }
+
+  setStatus(tableFileReference, '1');
   fclose(tableFileReference);
 }
 
@@ -539,32 +589,63 @@ void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,
   }
 }
 
-void insertVehicleRegisterIntoTable(char* tableFileName, vehicle_t** vehicleRegisters, int numberOfRegisters)
+int insertVehicleRegisterIntoTable(char* tableFileName, vehicle_t** vehicleRegisters, int numberOfRegisters)
 {
   FILE* tableFileReference = fopen(tableFileName, "rb+");
-  fileDidOpen(tableFileReference, "Falha no processamento do arquivo.\n");
-
-  goToFileEnd(tableFileReference);
- 
-  for (int i = 0; i < numberOfRegisters; i++)
+  if(!fileDidOpen(tableFileReference, "Falha no processamento do arquivo."))
   {
-    writeVehicleRegister(tableFileReference, vehicleRegisters[i]);
+    return 0;
+  } else if (getStatus(tableFileReference) == '0')
+  {
+    printf("%s\n", "Falha no processamento do arquivo.");
+    return 0;
   }
-  setHeader(tableFileReference, numberOfRegisters);
+  
+  setStatus(tableFileReference, '0');
+
+  if(isNullRegister(tableFileReference))
+  { 
+    printf("Registro inexistente.\n"); 
+  } else
+  {
+    goToFileEnd(tableFileReference);
+  
+    for (int i = 0; i < numberOfRegisters; i++)
+    {
+      writeVehicleRegister(tableFileReference, vehicleRegisters[i]);
+    }
+  }
+
+  long long newByteOffset = ftell(tableFileReference);
+
+  int newNroDeRegistros = getNroDeRegistros(tableFileReference);
+  newNroDeRegistros += numberOfRegisters;
+  setNroDeRegistros(tableFileReference, newNroDeRegistros);
+
+  setByteOffset(tableFileReference, newByteOffset);
+
+  setStatus(tableFileReference, '1');
   fclose(tableFileReference);
+
+  return 1;
 }
 
-void setHeader(FILE* fileReference, int numberOfRegisters){
-  goToFileEnd(fileReference);
-  long long byteOffset = ftell(fileReference);
-  goToFileStart(fileReference);
-  fseek(fileReference, 1, SEEK_SET);
-  fwrite(&byteOffset, sizeof(long long), 1, fileReference);
-  int newNumberOfRegisters = 0;
-  fread(&newNumberOfRegisters, sizeof(int), 1, fileReference);
-  printf("numer registros: %d", newNumberOfRegisters);
-  newNumberOfRegisters += numberOfRegisters;
-  printf("numer registros: %d", newNumberOfRegisters);
-  fseek(fileReference, 9, SEEK_SET);
-  fwrite(&newNumberOfRegisters, sizeof(int), 1, fileReference);
+void setByteOffset(FILE* tableFileReference, long long byteOffset)
+{
+  fseek(tableFileReference, 1, SEEK_SET);
+  fwrite(&byteOffset, sizeof(long long), 1, tableFileReference);
+}
+
+int getNroDeRegistros(FILE* tableFileReference)
+{
+  int nroDeRegistros;
+  fseek(tableFileReference, 9, SEEK_SET);
+  fread(&nroDeRegistros, sizeof(int), 1,tableFileReference);
+  return nroDeRegistros;
+}
+
+void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros)
+{
+  fseek(tableFileReference, 9, SEEK_SET);
+  fwrite(&nroDeRegistros, sizeof(int), 1, tableFileReference);
 }
