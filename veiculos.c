@@ -53,7 +53,7 @@ struct vehicle
 char** readHeader(FILE *dataFileReference);
 void freeHeader(char **header, int numberOfFields);
 char* readVehicleRegister(FILE* dataFileReference, vehicle_t* vehicleRegister);
-void setStatus(FILE* fileReference, int status);
+void setStatus(FILE* fileReference, char status);
 char getStatus(FILE* fileReference);
 int isNullField(char* field);
 int calculateTamanhoDoRegistro(vehicle_t* vehicleRegister);
@@ -90,6 +90,8 @@ int createVehicleTable(char *dataFileName, char *tableFileName)
   {
     return 0;
   }
+
+  setStatus(tableFileReference, '0');
 
   char **headerFields = readHeader(dataFileReference);
   fseek(tableFileReference, HEADER_SIZE+1, SEEK_SET);
@@ -332,7 +334,7 @@ void selectVehicleRegistersFrom(char* tableFileName)
   fclose(tableFileReference);
 }
 
-void setStatus(FILE* fileReference, int status)
+void setStatus(FILE* fileReference, char status)
 {
   goToFileStart(fileReference);
   fwrite(&status, sizeof(char), 1, fileReference);

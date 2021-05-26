@@ -138,4 +138,3 @@ scanf("%[^\n]", string) -> lê até encontrar o fim da linha, não incluindo o '
 scanf("%*c") --> lê um char e não guarda em nenhuma variável, como se tivesse ignorado ele
 
 */
-
