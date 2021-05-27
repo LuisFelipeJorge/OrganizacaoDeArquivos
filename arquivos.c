@@ -138,3 +138,42 @@ scanf("%[^\n]", string) -> lê até encontrar o fim da linha, não incluindo o '
 scanf("%*c") --> lê um char e não guarda em nenhuma variável, como se tivesse ignorado ele
 
 */
+
+
+void setStatus(FILE* fileReference, char status)
+{
+  goToFileStart(fileReference);
+  fwrite(&status, sizeof(char), 1, fileReference);
+  goToFileStart(fileReference);
+}
+
+char getStatus(FILE* fileReference)
+{
+  char status;
+  goToFileStart(fileReference);
+  fread(&status, sizeof(char), 1, fileReference);
+  goToFileStart(fileReference);
+  return status;
+}
+
+void goToFileStart(FILE* fileReference)
+{
+  fseek(fileReference, 0, SEEK_SET);
+}
+
+void goToFileEnd(FILE* fileReference)
+{
+  fseek(fileReference, 0, SEEK_END);
+}
+
+int isNullField(char* field)
+{
+  return (strcmp(field, "NULO") == 0 || strlen(field) == 0);
+}
+
+char** readHeader(FILE* dataFileReference, int headerSize, int numberOfColumns)
+{
+  char header[headerSize];
+  fgets(header, headerSize, dataFileReference);
+  return splitString(header, numberOfColumns, ",");
+}

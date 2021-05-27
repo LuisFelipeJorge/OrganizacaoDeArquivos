@@ -1,6 +1,6 @@
 typedef struct line line_t;
 
-#define NUMBER_OF_COLUMNS 4
+#define NUMBER_OF_COLUMNS_LINES 4
 
 int createLineTable(char *dataFileName, char* tableFileName);
 

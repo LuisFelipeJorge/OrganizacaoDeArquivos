@@ -1,6 +1,6 @@
 typedef struct vehicle vehicle_t;
 
-#define NUMBER_OF_COLUMNS 6
+#define NUMBER_OF_COLUMNS_VEHICLE 6
 
 vehicle_t* createVehicleRegister();
 void insertVehicleDataInStructure(char** vehicleDataFields, vehicle_t* vehicleRegister);

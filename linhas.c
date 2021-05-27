@@ -45,20 +45,15 @@ struct line
 
 
 
-char** readHeader(FILE* dataFileReference);
-void setStatus(FILE* fileReference, char status);
-void goToFileStart(FILE* fileReference);
-void goToFileEnd(FILE* fileReference);
-void jumpHeader(FILE* tableFileReference);
+void jumpLineHeader(FILE* tableFileReference);
 line_t* createLineRegister();
 void freeLineRegister(line_t* lineRegister);
 char* readLineRegister(FILE* dataFileReference, line_t* lineRegister);
 void writeLineRegister(FILE* tableFileReference, line_t* lineRegister);
 void insertLineDataInStructure(char** lineDataFields, line_t* lineRegister);
-int isNullField(char* field);
-int calculateTamanhoDoRegistro(line_t* lineRegister);
-cabecalho_t* createHeader();
-void insertHeaderDataInStructure(
+int calculateTamanhoDoRegistroLinha(line_t* lineRegister);
+cabecalho_t* createLineHeader();
+void insertLineHeaderDataInStructure(
   char status,
   long long byteProxRegistro,
   char** headerFields,
@@ -66,8 +61,8 @@ void insertHeaderDataInStructure(
   int nroRegRemovidos, 
   cabecalho_t* cabecalho
 );  
-void writeHeader(FILE* tableFileReference, cabecalho_t* cabecalho);
-void freeHeader(char **header, int numberOfFields);
+void writeLineHeader(FILE* tableFileReference, cabecalho_t* cabecalho);
+void freeLineHeader(char **header, int numberOfFields);
 
 
 
@@ -87,8 +82,8 @@ int createLineTable(char *dataFileName, char* tableFileName)
 
   setStatus(tableFileReference, '0');
 
-  char **headerFields = readHeader(dataFileReference);
-  jumpHeader(tableFileReference);
+  char **headerFields = readHeader(dataFileReference, HEADER_SIZE, NUMBER_OF_COLUMNS_LINES);
+  jumpLineHeader(tableFileReference);
 
   line_t* lineRegister = createLineRegister();
 
@@ -103,18 +98,19 @@ int createLineTable(char *dataFileName, char* tableFileName)
 
   freeLineRegister(lineRegister);
 
-  cabecalho_t* cabecalho = createHeader();
+  cabecalho_t* cabecalho = createLineHeader();
 
-  insertHeaderDataInStructure(
+  insertLineHeaderDataInStructure(
     '1', 
     ftell(tableFileReference), 
-    headerFields, countRegistros, 
+    headerFields, 
+    countRegistros, 
     countRemovidos,  
     cabecalho
   );    
 
-  writeHeader(tableFileReference, cabecalho);
-  freeHeader(headerFields, NUMBER_OF_COLUMNS);
+  writeLineHeader(tableFileReference, cabecalho);
+  freeLineHeader(headerFields, NUMBER_OF_COLUMNS_LINES);
 
   fclose(dataFileReference);
   fclose(tableFileReference);
@@ -123,31 +119,7 @@ int createLineTable(char *dataFileName, char* tableFileName)
 
 }
 
-char** readHeader(FILE* dataFileReference)
-{
-  char header[HEADER_SIZE];
-  fgets(header, HEADER_SIZE, dataFileReference);
-  return splitString(header, NUMBER_OF_COLUMNS, ",");
-}
-
-void setStatus(FILE* fileReference, char status)
-{
-  goToFileStart(fileReference);
-  fwrite(&status, sizeof(char), 1, fileReference);
-  goToFileStart(fileReference);
-}
-
-void goToFileStart(FILE* fileReference)
-{
-  fseek(fileReference, 0, SEEK_SET);
-}
-
-void goToFileEnd(FILE* fileReference)
-{
-  fseek(fileReference, 0, SEEK_END);
-}
-
-void jumpHeader(FILE* tableFileReference) 
+void jumpLineHeader(FILE* tableFileReference) 
 {
   fseek(tableFileReference, HEADER_SIZE, SEEK_SET);
 }
@@ -168,7 +140,7 @@ char* readLineRegister(FILE* dataFileReference, line_t* lineRegister)
 
   char *referenceCopy = fgets(lineData, STRING_SIZE, dataFileReference);
   
-  char **lineDataFields = splitString(lineData, NUMBER_OF_COLUMNS, ",");
+  char **lineDataFields = splitString(lineData, NUMBER_OF_COLUMNS_LINES, ",");
   
   insertLineDataInStructure(lineDataFields, lineRegister);
 
@@ -204,23 +176,18 @@ void insertLineDataInStructure(char** lineDataFields, line_t* lineRegister)
   { 
     lineRegister->codigoLinha = atoi(&lineDataFields[0][1]);
     lineRegister->removido[0]='0';
-    tamanhoDoRegistro = calculateTamanhoDoRegistro(lineRegister);
+    tamanhoDoRegistro = calculateTamanhoDoRegistroLinha(lineRegister);
   } else 
   { 
     lineRegister->codigoLinha = atoi(lineDataFields[0]);
     lineRegister->removido[0] ='1'; 
-    tamanhoDoRegistro = calculateTamanhoDoRegistro(lineRegister);
+    tamanhoDoRegistro = calculateTamanhoDoRegistroLinha(lineRegister);
   }
 
   lineRegister->tamanhoRegistro = tamanhoDoRegistro;
 }
 
-int isNullField(char* field)
-{
-  return (strcmp(field, "NULO") == 0 || strlen(field) == 0);
-}
-
-int calculateTamanhoDoRegistro(line_t* lineRegister)
+int calculateTamanhoDoRegistroLinha(line_t* lineRegister)
 {
   int codigoLinha, tamanhoNome, tamanhoCor;
 
@@ -236,7 +203,7 @@ int calculateTamanhoDoRegistro(line_t* lineRegister)
   );
 }
 
-cabecalho_t* createHeader()
+cabecalho_t* createLineHeader()
 {
   return (cabecalho_t*)malloc(sizeof(cabecalho_t));
 }
@@ -253,7 +220,7 @@ void writeLineRegister(FILE* tableFileReference, line_t* lineRegister)
   fwrite(lineRegister->corLinha, sizeof(char), lineRegister->tamanhoCor, tableFileReference);
 }
 
-void insertHeaderDataInStructure(
+void insertLineHeaderDataInStructure(
   char status,
   long long byteProxRegistro,
   char** headerFields,
@@ -272,7 +239,7 @@ void insertHeaderDataInStructure(
   strcpy(cabecalho->descreveLinha, headerFields[3]);
 }  
   
-void writeHeader(FILE* tableFileReference, cabecalho_t* cabecalho)
+void writeLineHeader(FILE* tableFileReference, cabecalho_t* cabecalho)
 {
   goToFileStart(tableFileReference);
   
@@ -286,7 +253,7 @@ void writeHeader(FILE* tableFileReference, cabecalho_t* cabecalho)
   fwrite(cabecalho->descreveLinha, sizeof(char), TAMANHO_DESCREVE_LINHA, tableFileReference);
 }  
 
-void freeHeader(char **header, int numberOfFields)
+void freeLineHeader(char **header, int numberOfFields)
 {
   for(int i=0; i < numberOfFields; i++)
   {
