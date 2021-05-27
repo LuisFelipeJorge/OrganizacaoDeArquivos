@@ -93,14 +93,8 @@ int main(int argc, char const *argv[])
         for (int i = 0; i < numberOfNewRegisters; i++)
         {
             newVehicleRegisters[i] = createVehicleRegister();
-            // zerar antes da leitura
-            for (int j = 0; j < NUMBER_OF_COLUMNS_VEHICLE; j++)
-            {
-                for (int w = 0; w < STRING_SIZE; w++)
-                {
-                    vehicleDataFields[j][w] = '\0';
-                }
-            }
+
+            resetStrings(vehicleDataFields, NUMBER_OF_COLUMNS_VEHICLE, STRING_SIZE);
 
             scan_quote_string(vehicleDataFields[0]);
             scan_quote_string(vehicleDataFields[1]);
@@ -121,6 +115,11 @@ int main(int argc, char const *argv[])
             binarioNaTela(tableFileName);
         }
 
+        for (int i = 0; i < numberOfNewRegisters; i++)
+        {
+            free(newVehicleRegisters[i]);
+        }
+        free(newVehicleRegisters);
 
         break;
     
@@ -138,14 +137,8 @@ int main(int argc, char const *argv[])
         for (int i = 0; i < numberOfNewRegisters; i++)
         {
             newLineRegisters[i] = createLineRegister();
-            // zerar antes da leitura
-            for (int j = 0; j < NUMBER_OF_COLUMNS_LINES; j++)
-            {
-                for (int w = 0; w < STRING_SIZE; w++)
-                {
-                    lineDataFields[j][w] = '\0';
-                }
-            }
+
+            resetStrings(lineDataFields, NUMBER_OF_COLUMNS_LINES, STRING_SIZE);
             
             scanf("%s", lineDataFields[0]);
             scan_quote_string(lineDataFields[1]);
@@ -163,6 +156,13 @@ int main(int argc, char const *argv[])
         {
             binarioNaTela(tableFileName);
         }
+
+        for (int i = 0; i < numberOfNewRegisters; i++)
+        {
+            free(newLineRegisters[i]);
+        }
+        free(newLineRegisters);
+
 
 
         break;

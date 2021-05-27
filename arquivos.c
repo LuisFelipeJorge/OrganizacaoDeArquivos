@@ -209,3 +209,15 @@ void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros)
   fseek(tableFileReference, 9, SEEK_SET);
   fwrite(&nroDeRegistros, sizeof(int), 1, tableFileReference);
 }
+
+
+void resetStrings(char **fields, int numberOfFields, int stringsSize)
+{
+  for (int j = 0; j < numberOfFields; j++)
+  {
+    for (int w = 0; w < stringsSize; w++)
+    {
+        fields[j][w] = '\0';
+    }
+  }
+}
