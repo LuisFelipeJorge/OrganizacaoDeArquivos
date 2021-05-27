@@ -46,11 +46,9 @@ struct line
 
 
 void jumpLineHeader(FILE* tableFileReference);
-line_t* createLineRegister();
 void freeLineRegister(line_t* lineRegister);
 char* readLineRegister(FILE* dataFileReference, line_t* lineRegister);
 void writeLineRegister(FILE* tableFileReference, line_t* lineRegister);
-void insertLineDataInStructure(char** lineDataFields, line_t* lineRegister);
 int calculateTamanhoDoRegistroLinha(line_t* lineRegister);
 cabecalhoLinha_t* createLineHeader();
 void insertLineHeaderDataInStructure(
@@ -464,4 +462,47 @@ void printLineRegisterSelectedBy(line_t* lineRegister, char* fieldName,char* val
       printLineRegister(lineRegister);
     }
   }
+}
+
+int insertLineRegisterIntoTable(
+  char* tableFileName, 
+  line_t** lineRegisters, 
+  int numberOfRegisters
+)
+{
+  FILE* tableFileReference = fopen(tableFileName, "rb+");
+  if(!fileDidOpen(tableFileReference) 
+    || isFileCorrupted(tableFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  }
+
+  setStatus(tableFileReference, '0');
+
+  if(isNullLineRegister(tableFileReference))
+  { 
+    printf("Registro inexistente.\n"); 
+  } else
+  {
+    goToFileEnd(tableFileReference);
+  
+    for (int i = 0; i < numberOfRegisters; i++)
+    {
+      writeLineRegister(tableFileReference, lineRegisters[i]);
+    }
+  }
+
+  long long newByteOffset = ftell(tableFileReference);
+  setByteOffset(tableFileReference, newByteOffset);
+
+  int newNroDeRegistros = getNroDeRegistros(tableFileReference);
+  newNroDeRegistros += numberOfRegisters;
+  setNroDeRegistros(tableFileReference, newNroDeRegistros);
+
+
+  setStatus(tableFileReference, '1');
+  fclose(tableFileReference);
+
+  return 1;
 }

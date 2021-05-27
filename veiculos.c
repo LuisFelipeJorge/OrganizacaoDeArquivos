@@ -589,7 +589,11 @@ void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,
   }
 }
 
-int insertVehicleRegisterIntoTable(char* tableFileName, vehicle_t** vehicleRegisters, int numberOfRegisters)
+int insertVehicleRegisterIntoTable(
+  char* tableFileName, 
+  vehicle_t** vehicleRegisters, 
+  int numberOfRegisters
+)
 {
   FILE* tableFileReference = fopen(tableFileName, "rb+");
   if(!fileDidOpen(tableFileReference) 
@@ -615,35 +619,15 @@ int insertVehicleRegisterIntoTable(char* tableFileName, vehicle_t** vehicleRegis
   }
 
   long long newByteOffset = ftell(tableFileReference);
+  setByteOffset(tableFileReference, newByteOffset);
 
   int newNroDeRegistros = getNroDeRegistros(tableFileReference);
   newNroDeRegistros += numberOfRegisters;
   setNroDeRegistros(tableFileReference, newNroDeRegistros);
 
-  setByteOffset(tableFileReference, newByteOffset);
 
   setStatus(tableFileReference, '1');
   fclose(tableFileReference);
 
   return 1;
-}
-
-void setByteOffset(FILE* tableFileReference, long long byteOffset)
-{
-  fseek(tableFileReference, 1, SEEK_SET);
-  fwrite(&byteOffset, sizeof(long long), 1, tableFileReference);
-}
-
-int getNroDeRegistros(FILE* tableFileReference)
-{
-  int nroDeRegistros;
-  fseek(tableFileReference, 9, SEEK_SET);
-  fread(&nroDeRegistros, sizeof(int), 1,tableFileReference);
-  return nroDeRegistros;
-}
-
-void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros)
-{
-  fseek(tableFileReference, 9, SEEK_SET);
-  fwrite(&nroDeRegistros, sizeof(int), 1, tableFileReference);
 }

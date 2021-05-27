@@ -13,3 +13,6 @@ int isNullField(char* field);
 char** readHeader(FILE* dataFileReference, int headerSize, int numberOfColumns);
 long long getByteOffset(FILE* tableFileReference);
 int isFileCorrupted(FILE* tableFileReference);
+void setByteOffset(FILE* tableFileReference, long long byteOffset);
+int getNroDeRegistros(FILE* tableFileReference);
+void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);

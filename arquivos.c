@@ -189,3 +189,23 @@ int isFileCorrupted(FILE* tableFileReference)
 {
   return (getStatus(tableFileReference) == '0');
 }
+
+void setByteOffset(FILE* tableFileReference, long long byteOffset)
+{
+  fseek(tableFileReference, 1, SEEK_SET);
+  fwrite(&byteOffset, sizeof(long long), 1, tableFileReference);
+}
+
+int getNroDeRegistros(FILE* tableFileReference)
+{
+  int nroDeRegistros;
+  fseek(tableFileReference, 9, SEEK_SET);
+  fread(&nroDeRegistros, sizeof(int), 1,tableFileReference);
+  return nroDeRegistros;
+}
+
+void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros)
+{
+  fseek(tableFileReference, 9, SEEK_SET);
+  fwrite(&nroDeRegistros, sizeof(int), 1, tableFileReference);
+}

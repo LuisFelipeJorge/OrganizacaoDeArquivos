@@ -9,6 +9,7 @@
 
 #define STRING_SIZE 50
 
+
 int main(int argc, char const *argv[])
 {
     int escolhaDafuncao;
@@ -19,6 +20,9 @@ int main(int argc, char const *argv[])
 
     char campo[STRING_SIZE/2];
     char valor[STRING_SIZE/2];
+
+    int numberOfNewRegisters;
+
 
     switch (escolhaDafuncao)
     {
@@ -78,10 +82,9 @@ int main(int argc, char const *argv[])
     case 7:
         getFileName(tableFileName);
     
-        int numberOfNewRegisters;
         scanf("%d", &numberOfNewRegisters);
 
-        vehicle_t** newRegisters = (vehicle_t**)malloc(sizeof(vehicle_t*));
+        vehicle_t** newVehicleRegisters = (vehicle_t**)malloc(sizeof(vehicle_t*));
         char** vehicleDataFields = (char**)malloc(sizeof(char*)*NUMBER_OF_COLUMNS_VEHICLE);
         for(int j=0; j < NUMBER_OF_COLUMNS_VEHICLE; j++){
             vehicleDataFields[j] = (char*)malloc(sizeof(char)*(STRING_SIZE));
@@ -89,7 +92,7 @@ int main(int argc, char const *argv[])
 
         for (int i = 0; i < numberOfNewRegisters; i++)
         {
-            newRegisters[i] = createVehicleRegister();
+            newVehicleRegisters[i] = createVehicleRegister();
             // zerar antes da leitura
             for (int j = 0; j < NUMBER_OF_COLUMNS_VEHICLE; j++)
             {
@@ -110,10 +113,10 @@ int main(int argc, char const *argv[])
             vehicleDataFields[5][strlen(vehicleDataFields[5])] = '\n';
             // corrigir logica de scanquote
             vehicleDataFields[5][strlen(vehicleDataFields[5])] = '\0';
-            insertVehicleDataInStructure((char**)vehicleDataFields, newRegisters[i]);
+            insertVehicleDataInStructure((char**)vehicleDataFields, newVehicleRegisters[i]);
         }
 
-        if(insertVehicleRegisterIntoTable(tableFileName, newRegisters, numberOfNewRegisters))
+        if(insertVehicleRegisterIntoTable(tableFileName, newVehicleRegisters, numberOfNewRegisters))
         {
             binarioNaTela(tableFileName);
         }
@@ -121,6 +124,48 @@ int main(int argc, char const *argv[])
 
         break;
     
+    case 8:
+        getFileName(tableFileName);
+    
+        scanf("%d", &numberOfNewRegisters);
+
+        line_t** newLineRegisters = (line_t**)malloc(sizeof(line_t*));
+        char** lineDataFields = (char**)malloc(sizeof(char*)*NUMBER_OF_COLUMNS_LINES);
+        for(int j=0; j < NUMBER_OF_COLUMNS_LINES; j++){
+            lineDataFields[j] = (char*)malloc(sizeof(char)*(STRING_SIZE));
+        }
+
+        for (int i = 0; i < numberOfNewRegisters; i++)
+        {
+            newLineRegisters[i] = createLineRegister();
+            // zerar antes da leitura
+            for (int j = 0; j < NUMBER_OF_COLUMNS_LINES; j++)
+            {
+                for (int w = 0; w < STRING_SIZE; w++)
+                {
+                    lineDataFields[j][w] = '\0';
+                }
+            }
+            
+            scanf("%s", lineDataFields[0]);
+            scan_quote_string(lineDataFields[1]);
+            scan_quote_string(lineDataFields[2]);
+            scan_quote_string(lineDataFields[3]);
+
+            // fazer ficar igual ao csv
+            lineDataFields[3][strlen(lineDataFields[3])] = '\n';
+            // corrigir logica de scanquote
+            lineDataFields[3][strlen(lineDataFields[3])] = '\0';
+            insertLineDataInStructure((char**)lineDataFields, newLineRegisters[i]);
+        }
+
+        if(insertLineRegisterIntoTable(tableFileName, newLineRegisters, numberOfNewRegisters))
+        {
+            binarioNaTela(tableFileName);
+        }
+
+
+        break;
 
     default:
         break;
@@ -128,20 +173,3 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
-
-
-
-// {
-//     char dataFileName[STRING_SIZE];
-//     char tableFileName[STRING_SIZE];
-//     getFileName(dataFileName);
-//     getFileName(tableFileName); 
-
-//     if(createVehicleTable(dataFileName, tableFileName))
-//     {
-//         binarioNaTela(tableFileName);
-//     }
-
-// }
-
-   
