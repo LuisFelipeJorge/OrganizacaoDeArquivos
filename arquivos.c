@@ -177,3 +177,11 @@ char** readHeader(FILE* dataFileReference, int headerSize, int numberOfColumns)
   fgets(header, headerSize, dataFileReference);
   return splitString(header, numberOfColumns, ",");
 }
+
+long long getByteOffset(FILE* tableFileReference)
+{
+  fseek(tableFileReference, 1, SEEK_SET);
+  long long byteProxRegistro;
+  fread(&byteProxRegistro, sizeof(long long), 1, tableFileReference);
+  return byteProxRegistro;
+}

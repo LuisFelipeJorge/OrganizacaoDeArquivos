@@ -45,7 +45,13 @@ int main(int argc, char const *argv[])
 
         selectVehicleRegistersFrom(tableFileName);
         break;
-    
+
+    case 4:
+        getFileName(tableFileName); 
+
+        selectLineRegistersFrom(tableFileName);
+        break;
+
     case 5:
 
         getFileName(tableFileName);

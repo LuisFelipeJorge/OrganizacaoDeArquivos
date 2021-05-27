@@ -11,3 +11,4 @@ void goToFileStart(FILE* fileReference);
 void goToFileEnd(FILE* fileReference);
 int isNullField(char* field);
 char** readHeader(FILE* dataFileReference, int headerSize, int numberOfColumns);
+long long getByteOffset(FILE* tableFileReference);

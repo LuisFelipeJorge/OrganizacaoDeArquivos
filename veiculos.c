@@ -50,7 +50,8 @@ struct vehicle
   int tamanhoCategoria;
 };
 
-void freeVehicleHeader(char **header, int numberOfFields);
+void freeVehicleHeaderFields(char **header, int numberOfFields);
+void freeVehicleHeader(cabecalhoVeiculo_t* cabecalhoVeiculo);
 char* readVehicleRegister(FILE* dataFileReference, vehicle_t* vehicleRegister);
 int calculateTamanhoDoRegistroVeiculo(vehicle_t* vehicleRegister);
 void writeVehicleRegister(FILE* tableFileReference,vehicle_t* vehicleRegister);
@@ -66,8 +67,7 @@ void insertVehicleHeaderDataInStructure(
 );
 void writeVehicleHeader(FILE* tableFileReference, cabecalhoVeiculo_t* cabecalhoVeiculo);
 void getDataNula(char* data);
-int isNullRegister(FILE* tableFileReference);
-long long getByteOffset(FILE* tableFileReference);
+int isNullVehicleRegister(FILE* tableFileReference);
 void jumpVehicleHeader(FILE* tableFileReference);
 char* getFormatedDate(char* date);
 void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* vehicleRegister);
@@ -127,12 +127,17 @@ int createVehicleTable(char *dataFileName, char *tableFileName)
     cabecalhoVeiculo
   );    
   writeVehicleHeader(tableFileReference, cabecalhoVeiculo);
-  freeVehicleHeader(headerFields, NUMBER_OF_COLUMNS_VEHICLE);
-
+  freeVehicleHeaderFields(headerFields, NUMBER_OF_COLUMNS_VEHICLE);
+  freeVehicleHeader(cabecalhoVeiculo);
   fclose(dataFileReference);
   fclose(tableFileReference);
 
   return 1;
+}
+
+void jumpVehicleHeader(FILE* tableFileReference) 
+{
+  fseek(tableFileReference, HEADER_SIZE+1, SEEK_SET);
 }
 
 vehicle_t* createVehicleRegister()
@@ -140,13 +145,18 @@ vehicle_t* createVehicleRegister()
   return (vehicle_t*)malloc(sizeof(vehicle_t));
 }
 
-void freeVehicleHeader(char **header, int numberOfFields)
+void freeVehicleHeaderFields(char **header, int numberOfFields)
 {
   for(int i=0; i < numberOfFields; i++)
   {
     free(header[i]);
   }
   free(header);
+}
+
+void freeVehicleHeader(cabecalhoVeiculo_t* cabecalhoVeiculo)
+{
+  free(cabecalhoVeiculo);
 }
 
 void freeVehicleRegister(vehicle_t* vehicleRegister)
@@ -319,9 +329,12 @@ void writeVehicleHeader(FILE* tableFileReference, cabecalhoVeiculo_t* cabecalhoV
 void selectVehicleRegistersFrom(char* tableFileName) 
 {
   FILE* tableFileReference = fopen(tableFileName, "rb");
-  fileDidOpen(tableFileReference, "Falha no processamento do arquivo.");
+  if(!fileDidOpen(tableFileReference, "Falha no processamento do arquivo."))
+  {
+    return;
+  }
 
-  if(isNullRegister(tableFileReference))
+  if(isNullVehicleRegister(tableFileReference))
   { 
     printf("Registro inexistente.\n"); 
   } else
@@ -336,36 +349,39 @@ void selectVehicleRegistersFrom(char* tableFileName)
   fclose(tableFileReference);
 }
 
-int isNullRegister(FILE* tableFileReference)
+int isNullVehicleRegister(FILE* tableFileReference)
 {
   long long byteProxRegistro = getByteOffset(tableFileReference);
   fread(&byteProxRegistro, sizeof(long long), 1, tableFileReference);
   goToFileStart(tableFileReference);
-  return (byteProxRegistro <=175);
-}
-
-long long getByteOffset(FILE* tableFileReference)
-{
-  fseek(tableFileReference, 1, SEEK_SET);
-  long long byteProxRegistro;
-  fread(&byteProxRegistro, sizeof(long long), 1, tableFileReference);
-  return byteProxRegistro;
-}
-
-void jumpVehicleHeader(FILE* tableFileReference) 
-{
-  fseek(tableFileReference, HEADER_SIZE+1, SEEK_SET);
+  return (byteProxRegistro <= HEADER_SIZE+1);
 }
 
 void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* vehicleRegister)
 {
-
   while ( fread(vehicleRegister->removido, sizeof(char), 1, tableFileReference) != 0)
   {
     readVehicleRegisterBIN(tableFileReference, vehicleRegister);
         
     printVehicleRegister(vehicleRegister);
   }
+}
+
+void readVehicleRegisterBIN(FILE* tableFileReference, vehicle_t* vehicleRegister)
+{
+  fread(&vehicleRegister->tamanhoRegistro, sizeof(int), 1, tableFileReference);
+  fread(vehicleRegister->prefixo, sizeof(char), TAMANHO_PREFIXO, tableFileReference);
+  vehicleRegister->prefixo[TAMANHO_PREFIXO] = '\0';
+  fread(vehicleRegister->data, sizeof(char), TAMANHO_DATA, tableFileReference);
+  vehicleRegister->data[TAMANHO_DATA] = '\0';
+  fread(&vehicleRegister->quantidadeDeLugares, sizeof(int), 1, tableFileReference);
+  fread(&vehicleRegister->codigoLinha, sizeof(int), 1, tableFileReference);
+  fread(&vehicleRegister->tamanhoModelo, sizeof(int), 1, tableFileReference);
+  fread(vehicleRegister->modelo, sizeof(char), vehicleRegister->tamanhoModelo, tableFileReference);
+  vehicleRegister->modelo[vehicleRegister->tamanhoModelo] = '\0';
+  fread(&vehicleRegister->tamanhoCategoria, sizeof(int), 1, tableFileReference);
+  fread(vehicleRegister->categoria, sizeof(char), vehicleRegister->tamanhoCategoria, tableFileReference);
+  vehicleRegister->categoria[vehicleRegister->tamanhoCategoria] = '\0';
 }
 
 void printVehicleRegister(vehicle_t* vehicleRegister)
@@ -489,7 +505,7 @@ void selectVehicleRegistersFromWhere(char* tableFileName, char* fieldName, char*
 
   setStatus(tableFileReference, '0');
 
-  if(isNullRegister(tableFileReference))
+  if(isNullVehicleRegister(tableFileReference))
   { 
     printf("Registro inexistente.\n"); 
   } else 
@@ -519,23 +535,6 @@ void readVehicleRegistersFromBinaryTableWithCondition
 
     printVehicleRegisterSelectedBy(vehicleRegister, fieldName, value);
   }
-}
-
-void readVehicleRegisterBIN(FILE* tableFileReference, vehicle_t* vehicleRegister)
-{
-  fread(&vehicleRegister->tamanhoRegistro, sizeof(int), 1, tableFileReference);
-  fread(vehicleRegister->prefixo, sizeof(char), TAMANHO_PREFIXO, tableFileReference);
-  vehicleRegister->prefixo[TAMANHO_PREFIXO] = '\0';
-  fread(vehicleRegister->data, sizeof(char), TAMANHO_DATA, tableFileReference);
-  vehicleRegister->data[TAMANHO_DATA] = '\0';
-  fread(&vehicleRegister->quantidadeDeLugares, sizeof(int), 1, tableFileReference);
-  fread(&vehicleRegister->codigoLinha, sizeof(int), 1, tableFileReference);
-  fread(&vehicleRegister->tamanhoModelo, sizeof(int), 1, tableFileReference);
-  fread(vehicleRegister->modelo, sizeof(char), vehicleRegister->tamanhoModelo, tableFileReference);
-  vehicleRegister->modelo[vehicleRegister->tamanhoModelo] = '\0';
-  fread(&vehicleRegister->tamanhoCategoria, sizeof(int), 1, tableFileReference);
-  fread(vehicleRegister->categoria, sizeof(char), vehicleRegister->tamanhoCategoria, tableFileReference);
-  vehicleRegister->categoria[vehicleRegister->tamanhoCategoria] = '\0';
 }
 
 void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,char* value)
@@ -591,7 +590,7 @@ int insertVehicleRegisterIntoTable(char* tableFileName, vehicle_t** vehicleRegis
   
   setStatus(tableFileReference, '0');
 
-  if(isNullRegister(tableFileReference))
+  if(isNullVehicleRegister(tableFileReference))
   { 
     printf("Registro inexistente.\n"); 
   } else

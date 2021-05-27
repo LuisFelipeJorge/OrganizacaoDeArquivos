@@ -19,7 +19,7 @@
 
 #define NULL_FIELD_INT -1
 
-typedef struct cabecalho
+typedef struct cabecalhoLinha
 {
   char status[TAMANHO_STATUS];
   long long int byteProxReg;
@@ -29,7 +29,7 @@ typedef struct cabecalho
   char descreveCartao[TAMANHO_DESCREVE_CARTAO+1];
   char descreveNome[TAMANHO_DESCREVE_NOME+1];
   char descreveLinha[TAMANHO_DESCREVE_LINHA+1];
-}cabecalho_t;
+}cabecalhoLinha_t;
 
 struct line
 {
@@ -52,17 +52,24 @@ char* readLineRegister(FILE* dataFileReference, line_t* lineRegister);
 void writeLineRegister(FILE* tableFileReference, line_t* lineRegister);
 void insertLineDataInStructure(char** lineDataFields, line_t* lineRegister);
 int calculateTamanhoDoRegistroLinha(line_t* lineRegister);
-cabecalho_t* createLineHeader();
+cabecalhoLinha_t* createLineHeader();
 void insertLineHeaderDataInStructure(
   char status,
   long long byteProxRegistro,
   char** headerFields,
   int nroRegistros, 
   int nroRegRemovidos, 
-  cabecalho_t* cabecalho
+  cabecalhoLinha_t* cabecalhoLinha
 );  
-void writeLineHeader(FILE* tableFileReference, cabecalho_t* cabecalho);
-void freeLineHeader(char **header, int numberOfFields);
+void writeLineHeader(FILE* tableFileReference, cabecalhoLinha_t* cabecalhoLinha);
+void freeLineHeaderFields(char **header, int numberOfFields);
+void freeLineHeader(cabecalhoLinha_t* cabecalhoLinha);
+int isNullLineRegister(FILE* tableFileReference);
+void readLineRegistersFromBinaryTable(FILE* tableFileReference, line_t* lineRegister);
+void readLineRegisterBIN(FILE* tableFileReference, line_t* lineRegister);
+void printLineRegister(line_t* lineRegister);
+
+
 
 
 
@@ -98,7 +105,7 @@ int createLineTable(char *dataFileName, char* tableFileName)
 
   freeLineRegister(lineRegister);
 
-  cabecalho_t* cabecalho = createLineHeader();
+  cabecalhoLinha_t* cabecalhoLinha = createLineHeader();
 
   insertLineHeaderDataInStructure(
     '1', 
@@ -106,11 +113,12 @@ int createLineTable(char *dataFileName, char* tableFileName)
     headerFields, 
     countRegistros, 
     countRemovidos,  
-    cabecalho
+    cabecalhoLinha
   );    
 
-  writeLineHeader(tableFileReference, cabecalho);
-  freeLineHeader(headerFields, NUMBER_OF_COLUMNS_LINES);
+  writeLineHeader(tableFileReference, cabecalhoLinha);
+  freeLineHeaderFields(headerFields, NUMBER_OF_COLUMNS_LINES);
+  freeLineHeader(cabecalhoLinha);
 
   fclose(dataFileReference);
   fclose(tableFileReference);
@@ -203,9 +211,9 @@ int calculateTamanhoDoRegistroLinha(line_t* lineRegister)
   );
 }
 
-cabecalho_t* createLineHeader()
+cabecalhoLinha_t* createLineHeader()
 {
-  return (cabecalho_t*)malloc(sizeof(cabecalho_t));
+  return (cabecalhoLinha_t*)malloc(sizeof(cabecalhoLinha_t));
 }
 
 void writeLineRegister(FILE* tableFileReference, line_t* lineRegister)
@@ -226,38 +234,139 @@ void insertLineHeaderDataInStructure(
   char** headerFields,
   int nroRegistros, 
   int nroRegRemovidos, 
-  cabecalho_t* cabecalho
+  cabecalhoLinha_t* cabecalhoLinha
 )
 {
-  cabecalho->status[0] = status;
-  cabecalho->byteProxReg = byteProxRegistro;
-  cabecalho->nroRegistros = nroRegistros - nroRegRemovidos;
-  cabecalho->nroRegRemovidos = nroRegRemovidos;
-  strcpy(cabecalho->descreveCodigo, headerFields[0]);
-  strcpy(cabecalho->descreveCartao, headerFields[1]);
-  strcpy(cabecalho->descreveNome, headerFields[2]);
-  strcpy(cabecalho->descreveLinha, headerFields[3]);
+  cabecalhoLinha->status[0] = status;
+  cabecalhoLinha->byteProxReg = byteProxRegistro;
+  cabecalhoLinha->nroRegistros = nroRegistros - nroRegRemovidos;
+  cabecalhoLinha->nroRegRemovidos = nroRegRemovidos;
+  strcpy(cabecalhoLinha->descreveCodigo, headerFields[0]);
+  strcpy(cabecalhoLinha->descreveCartao, headerFields[1]);
+  strcpy(cabecalhoLinha->descreveNome, headerFields[2]);
+  strcpy(cabecalhoLinha->descreveLinha, headerFields[3]);
 }  
   
-void writeLineHeader(FILE* tableFileReference, cabecalho_t* cabecalho)
+void writeLineHeader(FILE* tableFileReference, cabecalhoLinha_t* cabecalhoLinha)
 {
   goToFileStart(tableFileReference);
   
-  fwrite(cabecalho->status, sizeof(char), 1, tableFileReference);
-  fwrite(&cabecalho->byteProxReg, sizeof(long long), 1, tableFileReference);
-  fwrite(&cabecalho->nroRegistros, sizeof(int), 1, tableFileReference);
-  fwrite(&cabecalho->nroRegRemovidos, sizeof(int), 1, tableFileReference);
-  fwrite(cabecalho->descreveCodigo, sizeof(char), TAMANHO_DESCREVE_CODIGO, tableFileReference);
-  fwrite(cabecalho->descreveCartao, sizeof(char), TAMANHO_DESCREVE_CARTAO, tableFileReference);
-  fwrite(cabecalho->descreveNome, sizeof(char), TAMANHO_DESCREVE_NOME, tableFileReference);
-  fwrite(cabecalho->descreveLinha, sizeof(char), TAMANHO_DESCREVE_LINHA, tableFileReference);
+  fwrite(cabecalhoLinha->status, sizeof(char), 1, tableFileReference);
+  fwrite(&cabecalhoLinha->byteProxReg, sizeof(long long), 1, tableFileReference);
+  fwrite(&cabecalhoLinha->nroRegistros, sizeof(int), 1, tableFileReference);
+  fwrite(&cabecalhoLinha->nroRegRemovidos, sizeof(int), 1, tableFileReference);
+  fwrite(cabecalhoLinha->descreveCodigo, sizeof(char), TAMANHO_DESCREVE_CODIGO, tableFileReference);
+  fwrite(cabecalhoLinha->descreveCartao, sizeof(char), TAMANHO_DESCREVE_CARTAO, tableFileReference);
+  fwrite(cabecalhoLinha->descreveNome, sizeof(char), TAMANHO_DESCREVE_NOME, tableFileReference);
+  fwrite(cabecalhoLinha->descreveLinha, sizeof(char), TAMANHO_DESCREVE_LINHA, tableFileReference);
 }  
 
-void freeLineHeader(char **header, int numberOfFields)
+void freeLineHeaderFields(char **header, int numberOfFields)
 {
   for(int i=0; i < numberOfFields; i++)
   {
     free(header[i]);
   }
   free(header);
+}
+
+void freeLineHeader(cabecalhoLinha_t* cabecalhoLinha)
+{
+  free(cabecalhoLinha);
+}
+
+void selectLineRegistersFrom(char* tableFileName) 
+{
+  FILE* tableFileReference = fopen(tableFileName, "rb");
+  if(!fileDidOpen(tableFileReference, "Falha no processamento do arquivo."))
+  {
+    return;
+  }
+
+  if(isNullLineRegister(tableFileReference))
+  { 
+    printf("Registro inexistente.\n"); 
+  } else
+  {
+    jumpLineHeader(tableFileReference);
+
+    line_t* LineRegister = createLineRegister();
+    readLineRegistersFromBinaryTable(tableFileReference, LineRegister);
+  }
+
+  fclose(tableFileReference);
+}
+
+int isNullLineRegister(FILE* tableFileReference)
+{
+  long long byteProxRegistro = getByteOffset(tableFileReference);
+  fread(&byteProxRegistro, sizeof(long long), 1, tableFileReference);
+  goToFileStart(tableFileReference);
+  return (byteProxRegistro <= HEADER_SIZE+1);
+}
+
+void readLineRegistersFromBinaryTable(FILE* tableFileReference, line_t* lineRegister)
+{
+  while (fread(lineRegister->removido, sizeof(char), 1, tableFileReference) != 0)
+  {
+    readLineRegisterBIN(tableFileReference, lineRegister);
+        
+    printLineRegister(lineRegister);
+  }
+}
+
+void readLineRegisterBIN(FILE* tableFileReference, line_t* lineRegister)
+{
+  fread(&lineRegister->tamanhoRegistro, sizeof(int), 1, tableFileReference);
+  fread(&lineRegister->codigoLinha, sizeof(int), 1, tableFileReference);
+  fread(lineRegister->aceitaCartao, sizeof(char), 1, tableFileReference);
+  lineRegister->aceitaCartao[TAMANHO_CARTAO] = '\0';
+  fread(&lineRegister->tamanhoNome, sizeof(int), 1, tableFileReference);
+  fread(lineRegister->nomeLinha, sizeof(char), lineRegister->tamanhoNome, tableFileReference);
+  lineRegister->nomeLinha[lineRegister->tamanhoNome] = '\0';
+  fread(&lineRegister->tamanhoCor, sizeof(int), 1, tableFileReference);
+  fread(lineRegister->corLinha, sizeof(char), lineRegister->tamanhoCor, tableFileReference);
+  lineRegister->corLinha[lineRegister->tamanhoCor] = '\0';
+}
+
+void printLineRegister(line_t* lineRegister)
+{
+
+  if (lineRegister->removido[0] == '1')
+  {
+    printf("Codigo da linha: %d\n", lineRegister->codigoLinha);
+    if(lineRegister->tamanhoNome != 0)
+    {
+      printf("Nome da linha: %s\n", lineRegister->nomeLinha);
+    }else
+    {
+      printf("Nome da linha: campo com valor nulo\n");
+    }
+    if(lineRegister->tamanhoCor != 0)
+    {
+      printf("Cor que descreve a linha: %s\n", lineRegister->corLinha);
+    }else
+    {
+      printf("Cor que descreve a linha: campo com valor nulo\n");
+    }
+    if (strlen(lineRegister->aceitaCartao) != 0)
+    {
+      printf("Aceita cartao: ");
+      if (lineRegister->aceitaCartao[0] == 'S')
+      {
+        printf("PAGAMENTO SOMENTE COM CARTAO SEM PRESENCA DE COBRADOR\n");
+      } else if (lineRegister->aceitaCartao[0] == 'N')
+      {
+        printf("PAGAMENTO EM CARTAO E DINHEIRO\n");
+      }else if(lineRegister->aceitaCartao[0] == 'F')
+      {
+        printf("PAGAMENTO EM CARTAO SOMENTE NO FINAL DE SEMANA\n");
+      }
+    }else
+    {
+      printf("Aceita cartao: campo com valor nulo\n");
+    }
+
+    printf("\n");
+  }
 }
