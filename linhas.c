@@ -68,6 +68,14 @@ int isNullLineRegister(FILE* tableFileReference);
 void readLineRegistersFromBinaryTable(FILE* tableFileReference, line_t* lineRegister);
 void readLineRegisterBIN(FILE* tableFileReference, line_t* lineRegister);
 void printLineRegister(line_t* lineRegister);
+void readLineRegistersFromBinaryTableWithCondition
+(
+  FILE* tableFileReference, 
+  line_t* lineRegister,
+  char* fieldName,
+  char* value
+);
+void printLineRegisterSelectedBy(line_t* lineRegister, char* fieldName,char* value);
 
 
 
@@ -76,14 +84,16 @@ void printLineRegister(line_t* lineRegister);
 int createLineTable(char *dataFileName, char* tableFileName)
 {
   FILE* dataFileReference = fopen(dataFileName, "r");   
-  if(!fileDidOpen(dataFileReference, "Falha no processamento do arquivo."))
+  if(!fileDidOpen(dataFileReference))
   {
+    printf("Falha no processamento do arquivo.\n");
     return 0;
   } 
     
   FILE* tableFileReference = fopen(tableFileName, "wb+");
-  if (!fileDidOpen(tableFileReference, "Falha no processamento do arquivo."))
+  if (!fileDidOpen(tableFileReference))
   {
+    printf("Falha no processamento do arquivo.\n");
     return 0;
   }
 
@@ -278,8 +288,10 @@ void freeLineHeader(cabecalhoLinha_t* cabecalhoLinha)
 void selectLineRegistersFrom(char* tableFileName) 
 {
   FILE* tableFileReference = fopen(tableFileName, "rb");
-  if(!fileDidOpen(tableFileReference, "Falha no processamento do arquivo."))
+  if(!fileDidOpen(tableFileReference) 
+    || isFileCorrupted(tableFileReference))
   {
+    printf("Falha no processamento do arquivo.\n");
     return;
   }
 
@@ -290,8 +302,10 @@ void selectLineRegistersFrom(char* tableFileName)
   {
     jumpLineHeader(tableFileReference);
 
-    line_t* LineRegister = createLineRegister();
-    readLineRegistersFromBinaryTable(tableFileReference, LineRegister);
+    line_t* lineRegister = createLineRegister();
+    readLineRegistersFromBinaryTable(tableFileReference, lineRegister);
+    
+    freeLineRegister(lineRegister);
   }
 
   fclose(tableFileReference);
@@ -368,5 +382,86 @@ void printLineRegister(line_t* lineRegister)
     }
 
     printf("\n");
+  }
+}
+
+void selectLineRegistersFromWhere(char* tableFileName, char* fieldName, char* value) 
+{
+  FILE* tableFileReference = fopen(tableFileName, "rb");
+  if(!fileDidOpen(tableFileReference) 
+    || isFileCorrupted(tableFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return;
+  }
+
+  if(isNullLineRegister(tableFileReference))
+  { 
+    printf("Registro inexistente.\n"); 
+  } else 
+  {
+    jumpLineHeader(tableFileReference);
+
+    line_t* lineRegister = createLineRegister();
+    readLineRegistersFromBinaryTableWithCondition(
+      tableFileReference, 
+      lineRegister, 
+      fieldName, 
+      value
+    );
+
+    freeLineRegister(lineRegister);
+  }
+
+  fclose(tableFileReference);
+}
+
+
+void readLineRegistersFromBinaryTableWithCondition
+(
+  FILE* tableFileReference, 
+  line_t* lineRegister,
+  char* fieldName,
+  char* value
+)
+{
+  while ( fread(lineRegister->removido, sizeof(char), 1, tableFileReference) != 0)
+  {
+    readLineRegisterBIN(tableFileReference, lineRegister);    
+
+    printLineRegisterSelectedBy(lineRegister, fieldName, value);
+  }
+}
+
+
+void printLineRegisterSelectedBy(line_t* lineRegister, char* fieldName,char* value)
+{
+  if (strcmp(fieldName, "codLinha") == 0)
+  {
+    if(lineRegister->codigoLinha == atoi(value))
+    {
+      printLineRegister(lineRegister);
+    }
+  }
+  if (strcmp(fieldName, "aceitaCartao") == 0)
+  {
+    if(strcmp(lineRegister->aceitaCartao, value) == 0)
+    {
+      printLineRegister(lineRegister);
+    }
+  }
+  if (strcmp(fieldName, "nomeLinha") == 0)
+  {
+    if(strcmp(lineRegister->nomeLinha, value) == 0)
+    {
+      printLineRegister(lineRegister);
+    }
+  }
+  if (strcmp(fieldName, "corLinha") == 0)
+  {
+    if(strcmp(lineRegister->corLinha, value) == 0)
+    {
+      printLineRegister(lineRegister);
+    }
   }
 }

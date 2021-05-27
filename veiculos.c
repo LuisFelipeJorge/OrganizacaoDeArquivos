@@ -87,14 +87,16 @@ void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
 int createVehicleTable(char *dataFileName, char *tableFileName)
 {
   FILE* dataFileReference = fopen(dataFileName, "r");   
-  if(!fileDidOpen(dataFileReference, "Falha no processamento do arquivo."))
+  if(!fileDidOpen(dataFileReference))
   {
+    printf("Falha no processamento do arquivo.\n");
     return 0;
   } 
     
   FILE* tableFileReference = fopen(tableFileName, "wb+");
-  if (!fileDidOpen(tableFileReference, "Falha no processamento do arquivo."))
+  if (!fileDidOpen(tableFileReference))
   {
+    printf("Falha no processamento do arquivo.\n");
     return 0;
   }
 
@@ -329,8 +331,10 @@ void writeVehicleHeader(FILE* tableFileReference, cabecalhoVeiculo_t* cabecalhoV
 void selectVehicleRegistersFrom(char* tableFileName) 
 {
   FILE* tableFileReference = fopen(tableFileName, "rb");
-  if(!fileDidOpen(tableFileReference, "Falha no processamento do arquivo."))
+  if(!fileDidOpen(tableFileReference) 
+    || isFileCorrupted(tableFileReference))
   {
+    printf("Falha no processamento do arquivo.\n");
     return;
   }
 
@@ -342,8 +346,9 @@ void selectVehicleRegistersFrom(char* tableFileName)
     jumpVehicleHeader(tableFileReference);
 
     vehicle_t* vehicleRegister = createVehicleRegister();
-
     readVehicleRegistersFromBinaryTable(tableFileReference, vehicleRegister);
+
+    freeVehicleRegister(vehicleRegister);
   }
 
   fclose(tableFileReference);
@@ -501,9 +506,12 @@ char* getFormatedDate(char* date)
 void selectVehicleRegistersFromWhere(char* tableFileName, char* fieldName, char* value) 
 {
   FILE* tableFileReference = fopen(tableFileName, "rb");
-  fileDidOpen(tableFileReference, "Falha no processamento do arquivo.");
-
-  setStatus(tableFileReference, '0');
+  if(!fileDidOpen(tableFileReference) 
+    || isFileCorrupted(tableFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return;
+  }
 
   if(isNullVehicleRegister(tableFileReference))
   { 
@@ -513,11 +521,16 @@ void selectVehicleRegistersFromWhere(char* tableFileName, char* fieldName, char*
     jumpVehicleHeader(tableFileReference);
 
     vehicle_t* vehicleRegister = createVehicleRegister();
+    readVehicleRegistersFromBinaryTableWithCondition(
+      tableFileReference, 
+      vehicleRegister, 
+      fieldName, 
+      value
+    );
 
-    readVehicleRegistersFromBinaryTableWithCondition(tableFileReference, vehicleRegister, fieldName, value);
+    freeVehicleRegister(vehicleRegister);
   }
 
-  setStatus(tableFileReference, '1');
   fclose(tableFileReference);
 }
 
@@ -579,15 +592,13 @@ void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,
 int insertVehicleRegisterIntoTable(char* tableFileName, vehicle_t** vehicleRegisters, int numberOfRegisters)
 {
   FILE* tableFileReference = fopen(tableFileName, "rb+");
-  if(!fileDidOpen(tableFileReference, "Falha no processamento do arquivo."))
+  if(!fileDidOpen(tableFileReference) 
+    || isFileCorrupted(tableFileReference))
   {
-    return 0;
-  } else if (getStatus(tableFileReference) == '0')
-  {
-    printf("%s\n", "Falha no processamento do arquivo.");
+    printf("Falha no processamento do arquivo.\n");
     return 0;
   }
-  
+
   setStatus(tableFileReference, '0');
 
   if(isNullVehicleRegister(tableFileReference))

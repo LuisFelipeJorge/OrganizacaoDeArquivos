@@ -4,4 +4,4 @@ typedef struct line line_t;
 
 int createLineTable(char *dataFileName, char* tableFileName);
 void selectLineRegistersFrom(char* tableFileName);
-
+void selectLineRegistersFromWhere(char* tableFileName, char* fieldName, char* value);

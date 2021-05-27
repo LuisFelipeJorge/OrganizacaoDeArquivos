@@ -17,6 +17,9 @@ int main(int argc, char const *argv[])
     char dataFileName[STRING_SIZE];
     char tableFileName[STRING_SIZE];
 
+    char campo[STRING_SIZE/2];
+    char valor[STRING_SIZE/2];
+
     switch (escolhaDafuncao)
     {
     case 1:
@@ -56,11 +59,19 @@ int main(int argc, char const *argv[])
 
         getFileName(tableFileName);
 
-        char campo[STRING_SIZE/2];
-        char valor[STRING_SIZE/2];
         scanf("%s", campo);
         scan_quote_string(valor);
         selectVehicleRegistersFromWhere(tableFileName, campo, valor);
+        
+        break;
+
+    case 6:
+
+        getFileName(tableFileName);
+
+        scanf("%s", campo);
+        scan_quote_string(valor);
+        selectLineRegistersFromWhere(tableFileName, campo, valor);
         
         break;
 

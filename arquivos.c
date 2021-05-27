@@ -12,10 +12,9 @@ void getFileName(char *fileName)
   scanf("%s", fileName);
 }
 
-int fileDidOpen(FILE* fileRefence, char* errorMessage) {
+int fileDidOpen(FILE* fileRefence) {
   if (!fileRefence) 
   {
-    printf("%s\n", errorMessage);
     return 0;
   } return 1;
 }
@@ -184,4 +183,9 @@ long long getByteOffset(FILE* tableFileReference)
   long long byteProxRegistro;
   fread(&byteProxRegistro, sizeof(long long), 1, tableFileReference);
   return byteProxRegistro;
+}
+
+int isFileCorrupted(FILE* tableFileReference) 
+{
+  return (getStatus(tableFileReference) == '0');
 }
