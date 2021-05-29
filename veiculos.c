@@ -5,6 +5,9 @@
 #include "veiculos.h"
 #include "arquivos.h"
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Tamanho dos campos de cabeçalho e de registro (em Bytes) definidos no documento de requisitos
+
 #define STRING_SIZE 100
 #define HEADER_SIZE 174
 
@@ -20,6 +23,7 @@
 #define TAMANHO_DATA 10
 #define TAMANHO_REMOVIDO 1
 
+// definindo como deve ser considerado um campo do tipo int nulo
 #define NULL_FIELD_INT -1
 
 typedef struct cabecalhoVeiculo
@@ -48,7 +52,10 @@ struct vehicle
   int tamanhoRegistro;
   int tamanhoModelo;
   int tamanhoCategoria;
-};
+}; 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Funções auxiliares para o tratamento dos registros de veículos
 
 void freeVehicleHeaderFields(char **header, int numberOfFields);
 void freeVehicleHeader(cabecalhoVeiculo_t* cabecalhoVeiculo);
@@ -83,6 +90,10 @@ void setByteOffset(FILE* tableFileReference, long long byteOffset);
 int getNroDeRegistros(FILE* tableFileReference);
 void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Definição da Funções
+
+// CREATE TABLE FUNCAO 1
 
 int createVehicleTable(char *dataFileName, char *tableFileName)
 {
@@ -109,6 +120,7 @@ int createVehicleTable(char *dataFileName, char *tableFileName)
 
   int countRemovidos=0;
   int countRegistros=0;
+  // Enquanto houver conteúdo dentro do CSV (arquivo de dados), continue lendo e fazendo a escrita no arquivo binário(tabela)
   while(readVehicleRegister(dataFileReference, vehicleRegister) != NULL)
   { 
     countRegistros++;
@@ -120,6 +132,7 @@ int createVehicleTable(char *dataFileName, char *tableFileName)
 
   cabecalhoVeiculo_t* cabecalhoVeiculo = createVehicleHeader();
 
+  // preechendo a estrutura cabeçalho com a informação colhida do arquivo csv
   insertVehicleHeaderDataInStructure(
     '1', 
     ftell(tableFileReference),
@@ -128,9 +141,12 @@ int createVehicleTable(char *dataFileName, char *tableFileName)
     countRemovidos,  
     cabecalhoVeiculo
   );    
+  // Com a estrutura completa, escrevemos ela dentro do arquivo binário
   writeVehicleHeader(tableFileReference, cabecalhoVeiculo);
+
   freeVehicleHeaderFields(headerFields, NUMBER_OF_COLUMNS_VEHICLE);
   freeVehicleHeader(cabecalhoVeiculo);
+
   fclose(dataFileReference);
   fclose(tableFileReference);
 
@@ -168,17 +184,19 @@ void freeVehicleRegister(vehicle_t* vehicleRegister)
 
 char* readVehicleRegister(FILE* dataFileReference, vehicle_t* vehicleRegister)
 {
+  // String para ler uma linha inteira do arquivo csv
   char vehicleData[STRING_SIZE];
 
   char *referenceCopy = fgets(vehicleData, STRING_SIZE, dataFileReference);
-  
+  //   Separando os campos da linha pela vírgula
   char **vehicleDataFields = splitString(vehicleData, NUMBER_OF_COLUMNS_VEHICLE, ",");
-  
+  // copiando as informações dos campos em uma estrutura de veículo
   insertVehicleDataInStructure(vehicleDataFields, vehicleRegister);
 
-  return referenceCopy; 
+  return referenceCopy; // estado da leitura, (NULL) -> sem mais dados para ler
 }
 
+// Função para o tratamento da informação
 void insertVehicleDataInStructure(char** vehicleDataFields, vehicle_t* vehicleRegister)
 {
 
@@ -189,7 +207,8 @@ void insertVehicleDataInStructure(char** vehicleDataFields, vehicle_t* vehicleRe
   {  
     char dataNula[TAMANHO_DATA];
     getDataNula(dataNula);
-    strcpy(vehicleRegister->data, dataNula); 
+    strcpy(vehicleRegister->data, dataNula);
+    // pelo comportamento da função strcpy, é necessário adicionoar o \0 após o preenchimeno da estrutura 
     vehicleRegister->data[0] = '\0'; 
   }
 
@@ -222,6 +241,8 @@ void insertVehicleDataInStructure(char** vehicleDataFields, vehicle_t* vehicleRe
   if (!isNullField(vehicleDataFields[5])) 
   { 
     strcpy(vehicleRegister->categoria, vehicleDataFields[5]);
+    // no csv, os campos de categoria possuem \n, que é contabilizado pelo strlen, dai a necessidade de 
+    // se corrigir o tamanho da string
     vehicleRegister->tamanhoCategoria=strlen(vehicleDataFields[5])-1;
   } else 
   { 
@@ -234,6 +255,8 @@ void insertVehicleDataInStructure(char** vehicleDataFields, vehicle_t* vehicleRe
   { 
     strcpy(vehicleRegister->prefixo, &vehicleDataFields[0][1]);
     vehicleRegister->removido[0]='0';
+    // o campo prefixo de um registro logicamente removido possui 4 caracteres ao inves de 5
+    // dai a necessidade de se corrigir o tamanho do registro
     tamanhoDoRegistro = calculateTamanhoDoRegistroVeiculo(vehicleRegister) + 1;
 
   } else 
@@ -374,6 +397,7 @@ void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* ve
 
 void readVehicleRegisterBIN(FILE* tableFileReference, vehicle_t* vehicleRegister)
 {
+  // necessario adicionar \0 nas strings, para o funcionamento adequada da função printf
   fread(&vehicleRegister->tamanhoRegistro, sizeof(int), 1, tableFileReference);
   fread(vehicleRegister->prefixo, sizeof(char), TAMANHO_PREFIXO, tableFileReference);
   vehicleRegister->prefixo[TAMANHO_PREFIXO] = '\0';
