@@ -5,6 +5,8 @@
 
 #include "arquivos.h"
 
+// Funções auxiliares para o tratamento generico dos 2 tipos de arquivos
+
 #define STRING_SIZE 50
 
 void getFileName(char *fileName)
@@ -21,35 +23,44 @@ int fileDidOpen(FILE* fileRefence) {
 
 char **splitString(char *string, int numberOfFields, char *delimeter)
 {
-    char **splitedStrings = (char**)malloc(sizeof(char*)*numberOfFields);
-    memorySuccessfullyAllocated((void**)splitedStrings);
-
-    for (int i = 0; i < numberOfFields; i++)
-    {
-        splitedStrings[i] = (char*)malloc(sizeof(char)*STRING_SIZE);
-        memorySuccessfullyAllocated((void**)&splitedStrings[i]);
-    }
-    
-    char *stringCopy = strdup(string);
-    char *separatedString;  
+  // Função para separar os campos de uma string por um delimitador definido
+  // retorna os campos no formato de um vetor de string, isto é, uma matriz de caracteres
+  // cada linha da matriz é uma string que representa um dos campos
   
-    int fieldAdress = 0;
-    while((separatedString = strsep(&stringCopy, delimeter)))
-    { 
-        strcpy(splitedStrings[fieldAdress], separatedString);
-        fieldAdress++;
-    }
+  // Alocando a memoria
+  char **splitedStrings = (char**)malloc(sizeof(char*)*numberOfFields);
+  memorySuccessfullyAllocated((void**)splitedStrings);
 
-    return splitedStrings;
+  for (int i = 0; i < numberOfFields; i++)
+  {
+      splitedStrings[i] = (char*)malloc(sizeof(char)*STRING_SIZE);
+      memorySuccessfullyAllocated((void**)&splitedStrings[i]);
+  }
+  
+  // Cópia da referência, para assegurar que o valor original não é alterado
+  char *stringCopy = strdup(string);
+  // string já separada
+  char *separatedString;  
+
+  int fieldAdress = 0;
+  // Enquanto houver tolkens, continue separando
+  while((separatedString = strsep(&stringCopy, delimeter)))
+  { 
+    // copiando o token dentro do vetor de strings
+    strcpy(splitedStrings[fieldAdress], separatedString);
+    fieldAdress++;
+  }
+
+  return splitedStrings;
 }
 
 void memorySuccessfullyAllocated(void **memoryReference)
 {
-    if ( memoryReference == NULL) 
-    {
-        perror("memory allocations");
-        exit(EXIT_FAILURE);
-    }
+  if ( memoryReference == NULL) 
+  {
+    perror("memory allocations");
+    exit(EXIT_FAILURE);
+  }
 }
 
 void binarioNaTela(char *nomeArquivoBinario) 

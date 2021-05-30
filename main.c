@@ -20,26 +20,28 @@ int main(int argc, char const *argv[])
 
     char campo[STRING_SIZE/2];
     char valor[STRING_SIZE/2];
-
     int numberOfNewRegisters;
 
-
+    //menu pra escolher qual função vai executar
     switch (escolhaDafuncao)
     {
+    // le os registros presentes em veiculo.csv e os armazena num arquivo de saida
     case 1:
         getFileName(dataFileName);
         getFileName(tableFileName); 
 
+        //mostra o arquivo binario na tela apenas se conseguir criar a tabela
         if(createVehicleTable(dataFileName, tableFileName))
         {
             binarioNaTela(tableFileName);
         }
         break;
-
+    // le os registros presentes em linha.csv e os grava em um arquivo de dados de saída
     case 2:
         getFileName(dataFileName);
         getFileName(tableFileName); 
 
+        //mostra o arquivo binario na tela apenas se conseguir criar a tabela
         if(createLineTable(dataFileName, tableFileName))
         {
             binarioNaTela(tableFileName);
@@ -47,28 +49,29 @@ int main(int argc, char const *argv[])
 
         break;    
 
+    // Recupera os dados de todos os registros armazenados no arquivo de dados veiculos.bin, mostrando os dados de forma organizada
     case 3:
         getFileName(tableFileName); 
-
         selectVehicleRegistersFrom(tableFileName);
         break;
-
+   
+    // Recupera os dados de todos os registros armazenados no arquivo de dados linhas.bin, mostrando os dados de forma organizada
     case 4:
         getFileName(tableFileName); 
 
         selectLineRegistersFrom(tableFileName);
         break;
 
+    // Recupera os dados de todos os registros do arquivo veiculos.bin que satisfaçam um critério de busca determinado pelo usuário
     case 5:
-
         getFileName(tableFileName);
-
         scanf("%s", campo);
         scan_quote_string(valor);
         selectVehicleRegistersFromWhere(tableFileName, campo, valor);
         
         break;
-
+    
+    // Recupera os dados de todos os registros do arquivo linhas.bin que satisfaçam um critério de busca determinado pelo usuário
     case 6:
 
         getFileName(tableFileName);
@@ -79,12 +82,13 @@ int main(int argc, char const *argv[])
         
         break;
 
+    // Permita a inserção de novos registros no arquivo de entrada veiculos.bin ao final do arquivo de dados.
     case 7:
         getFileName(tableFileName);
-    
         scanf("%d", &numberOfNewRegisters);
-
+        //aloca uma matriz para armazenar os registros dos novos veiculos
         vehicle_t** newVehicleRegisters = (vehicle_t**)malloc(sizeof(vehicle_t*));
+        //aloca uma matriz para armazenar os dados de cada veiculo novo
         char** vehicleDataFields = (char**)malloc(sizeof(char*)*NUMBER_OF_COLUMNS_VEHICLE);
         for(int j=0; j < NUMBER_OF_COLUMNS_VEHICLE; j++){
             vehicleDataFields[j] = (char*)malloc(sizeof(char)*(STRING_SIZE));
@@ -92,8 +96,11 @@ int main(int argc, char const *argv[])
 
         for (int i = 0; i < numberOfNewRegisters; i++)
         {
+            // cria uma registro novo para cada iteração
             newVehicleRegisters[i] = createVehicleRegister();
-
+            // garante que em todas as iterações começamos com os valores zerados
+            // isso é necessário devido ao comportamento da strcpy, que altera apenas os bytes novos da string
+            // e mantem os valores da iteração passada
             resetStrings(vehicleDataFields, NUMBER_OF_COLUMNS_VEHICLE, STRING_SIZE);
 
             scan_quote_string(vehicleDataFields[0]);
@@ -103,9 +110,10 @@ int main(int argc, char const *argv[])
             scan_quote_string(vehicleDataFields[4]);
             scan_quote_string(vehicleDataFields[5]);
 
-            // fazer ficar igual ao csv
+            // fazer ficar igual ao csv, para nao precisar alterar a logica do TAD veiculos
             vehicleDataFields[5][strlen(vehicleDataFields[5])] = '\n';
-            // corrigir logica de scanquote
+            // corrigir logica de scanquote, 
+            // necessario add o \0 para o funcionamento adequado das funções printf e da string.h
             vehicleDataFields[5][strlen(vehicleDataFields[5])] = '\0';
             insertVehicleDataInStructure((char**)vehicleDataFields, newVehicleRegisters[i]);
         }
@@ -123,6 +131,7 @@ int main(int argc, char const *argv[])
 
         break;
     
+    // Permita a inserção de novos registros no arquivo de entrada linhas.bin ao final do arquivo de dados.
     case 8:
         getFileName(tableFileName);
     

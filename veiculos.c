@@ -93,29 +93,37 @@ void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Definição da Funções
 
-// CREATE TABLE FUNCAO 1
-
+// VEICULOS - Cria uma tabela de nome tableFileName com as informaçoes de dataFileName (.csv)
+//retorna 0 se tiver dado erro e 1 se tiver dado certo
 int createVehicleTable(char *dataFileName, char *tableFileName)
 {
+  //abre o arquivo de referencia para leitura
   FILE* dataFileReference = fopen(dataFileName, "r");   
+  //ARQUIVOS - se não conseguir abrir mostra mensagem de erro de processamento de arquivo
   if(!fileDidOpen(dataFileReference))
   {
     printf("Falha no processamento do arquivo.\n");
     return 0;
   } 
-    
+  //cria o arquivo para insercao de dados/tabela e o abre para escrita
   FILE* tableFileReference = fopen(tableFileName, "wb+");
+  //ARQUIVOS - se não conseguir criar e inserir mostra mensagem de erro de processamento de arquivo
   if (!fileDidOpen(tableFileReference))
   {
     printf("Falha no processamento do arquivo.\n");
     return 0;
   }
-
+  //ARQUIVOS - insere o status do arquivo de abertura como 0, para verificar que o arquivo foi manuseado de forma
+  // adequada 
   setStatus(tableFileReference, '0');
 
+  //ARQUIVOS -  separa os campos do header de acordo com as especificacoes do trabalho
   char **headerFields = readHeader(dataFileReference, HEADER_SIZE, NUMBER_OF_COLUMNS_VEHICLE);
+  
+  //VEICULOS - seta o ponteiro do arquivo para depois do header
   jumpVehicleHeader(tableFileReference);
 
+  // cria um registro para salvar os veiculos
   vehicle_t *vehicleRegister = createVehicleRegister();
 
   int countRemovidos=0;
@@ -124,12 +132,15 @@ int createVehicleTable(char *dataFileName, char *tableFileName)
   while(readVehicleRegister(dataFileReference, vehicleRegister) != NULL)
   { 
     countRegistros++;
+    //se o arquivo tiver sido logicemente removido adiciona um ao contador de removidos
     if(vehicleRegister->removido[0] == '0') { countRemovidos++; }
+    //insere o registro do veiculo na tabela/arquivo binario
     writeVehicleRegister(tableFileReference, vehicleRegister);
   }
-
+  //libera o ponteiro de registro de veiculo
   freeVehicleRegister(vehicleRegister);
 
+  //cria um ponteiro novo para o cabecalho do veiculo
   cabecalhoVeiculo_t* cabecalhoVeiculo = createVehicleHeader();
 
   // preechendo a estrutura cabeçalho com a informação colhida do arquivo csv
@@ -143,21 +154,22 @@ int createVehicleTable(char *dataFileName, char *tableFileName)
   );    
   // Com a estrutura completa, escrevemos ela dentro do arquivo binário
   writeVehicleHeader(tableFileReference, cabecalhoVeiculo);
-
+  //libera estruturas
   freeVehicleHeaderFields(headerFields, NUMBER_OF_COLUMNS_VEHICLE);
   freeVehicleHeader(cabecalhoVeiculo);
-
+  //fecha arquivos
   fclose(dataFileReference);
   fclose(tableFileReference);
 
   return 1;
 }
 
+// seta o ponteiro do arquivo para depois do header
 void jumpVehicleHeader(FILE* tableFileReference) 
 {
   fseek(tableFileReference, HEADER_SIZE+1, SEEK_SET);
 }
-
+//Veiculos - cria um ponteiro do tipo cabecalhoVeiculo que é uma struct e aloca apenas o tamanho na memoria de um cabecalho 
 vehicle_t* createVehicleRegister()
 {
   return (vehicle_t*)malloc(sizeof(vehicle_t));
@@ -351,24 +363,30 @@ void writeVehicleHeader(FILE* tableFileReference, cabecalhoVeiculo_t* cabecalhoV
   fwrite(cabecalhoVeiculo->descreveCategoria, sizeof(char), TAMANHO_DESCREVE_CATEGORIA, tableFileReference);
 }
 
+// SELECT - pega todos os dados da tabela
 void selectVehicleRegistersFrom(char* tableFileName) 
 {
+  //abre o arquivo da tabela 
   FILE* tableFileReference = fopen(tableFileName, "rb");
+  //verifica se teve problemas ao abrir o arquivo ou se ele está comrrompido
   if(!fileDidOpen(tableFileReference) 
     || isFileCorrupted(tableFileReference))
   {
     printf("Falha no processamento do arquivo.\n");
     return;
   }
-
+  // verifica se tem algum registri cadastro na tabela
   if(isNullVehicleRegister(tableFileReference))
   { 
     printf("Registro inexistente.\n"); 
   } else
   {
+    //pula o cabecalho
     jumpVehicleHeader(tableFileReference);
-
+    
+    // cria um registro de veiculos vazio
     vehicle_t* vehicleRegister = createVehicleRegister();
+    // usa o registro de veiculos para ler a tabela de registros de veiculos
     readVehicleRegistersFromBinaryTable(tableFileReference, vehicleRegister);
 
     freeVehicleRegister(vehicleRegister);
@@ -387,10 +405,12 @@ int isNullVehicleRegister(FILE* tableFileReference)
 
 void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* vehicleRegister)
 {
+  //le apenas se o registro n tiver sido marcado como apagado
   while ( fread(vehicleRegister->removido, sizeof(char), 1, tableFileReference) != 0)
   {
+    //le cada registro 
     readVehicleRegisterBIN(tableFileReference, vehicleRegister);
-        
+    //imprime o que foi lido de forma organizada    
     printVehicleRegister(vehicleRegister);
   }
 }

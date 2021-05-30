@@ -15,7 +15,7 @@ debug:
 	gcc $(CFLAGS) -g $(CFILES)
 
 run:
-	./$(TARGET) < ./Tests/1.in
+	./$(TARGET)
 
 runMem:
 	valgrind ./$(TARGET)
