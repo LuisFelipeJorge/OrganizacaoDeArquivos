@@ -33,4 +33,4 @@ int getNroDeRegistros(FILE* tableFileReference);
 void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
 
 char* getPrefixo(vehicle_t* vehicleRegister);
-void setRemovido(vehicle_t* vehicleRegister, char campoRemovido);
+void setRemovidoVehicle(vehicle_t* vehicleRegister, char campoRemovido);

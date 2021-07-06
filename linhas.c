@@ -46,7 +46,6 @@ struct line
 
 
 void jumpLineHeader(FILE* tableFileReference);
-void freeLineRegister(line_t* lineRegister);
 char* readLineRegister(FILE* dataFileReference, line_t* lineRegister);
 void writeLineRegister(FILE* tableFileReference, line_t* lineRegister);
 int calculateTamanhoDoRegistroLinha(line_t* lineRegister);
@@ -64,8 +63,6 @@ void freeLineHeaderFields(char **header, int numberOfFields);
 void freeLineHeader(cabecalhoLinha_t* cabecalhoLinha);
 int isNullLineRegister(FILE* tableFileReference);
 void readLineRegistersFromBinaryTable(FILE* tableFileReference, line_t* lineRegister);
-void readLineRegisterBIN(FILE* tableFileReference, line_t* lineRegister);
-void printLineRegister(line_t* lineRegister);
 void readLineRegistersFromBinaryTableWithCondition
 (
   FILE* tableFileReference, 
@@ -505,4 +502,13 @@ int insertLineRegisterIntoTable(
   fclose(tableFileReference);
 
   return 1;
+}
+
+
+//////////////////////////////////////////////////////////
+// funçoes para manter o tad fechado e auxiliar à arvore B
+
+void setRemovidoLine(line_t* lineRegister, char campoRemovido)
+{
+  lineRegister->removido[0] = campoRemovido;
 }

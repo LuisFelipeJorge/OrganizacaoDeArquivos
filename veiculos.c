@@ -684,7 +684,7 @@ char* getPrefixo(vehicle_t* vehicleRegister)
   return vehicleRegister->prefixo;
 }
 
-void setRemovido(vehicle_t* vehicleRegister, char campoRemovido)
+void setRemovidoVehicle(vehicle_t* vehicleRegister, char campoRemovido)
 {
   vehicleRegister->removido[0] = campoRemovido;
 }

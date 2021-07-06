@@ -13,3 +13,8 @@ int insertLineRegisterIntoTable(
 );
 line_t* createLineRegister();
 
+
+void setRemovidoLine(line_t* lineRegister, char campoRemovido);
+void readLineRegisterBIN(FILE* tableFileReference, line_t* lineRegister);
+void freeLineRegister(line_t* lineRegister);
+void printLineRegister(line_t* lineRegister);

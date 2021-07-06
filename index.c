@@ -4,6 +4,7 @@
 
 #include "arquivos.h"
 #include "veiculos.h"
+#include "linhas.h"
 #include "index.h"
 #include "convertePrefixo.h"
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -414,7 +415,7 @@ int sgdbVehicles(char* tableFileName, char* indexFileName, char* searchValue)
     return 0;
   }
   
-  setRemovido(vehicleRegister, campoRemovido);
+  setRemovidoVehicle(vehicleRegister, campoRemovido);
   readVehicleRegisterBIN(tableFileReference, vehicleRegister);
 
   printVehicleRegister(vehicleRegister);
@@ -485,6 +486,66 @@ chaves_t* searchKeyInsideIndex(int currentRRN, int key, noArvoreB_t* currentNode
   }
   
   return NULL;
+}
+
+int sgdbLines(char* tableFileName, char* indexFileName, int searchValue) 
+{
+  // abre o arquivo da tabela de veiculos para leitura
+  FILE* tableFileReference = fopen(tableFileName, "r");   
+  //ARQUIVOS - se não conseguir abrir mostra mensagem de erro de processamento de arquivo
+  if(!fileDidOpen(tableFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  } 
+
+  //cria o arquivo para insercao de índices e o abre para escrita
+  FILE* indexFileReference = fopen(indexFileName, "r");
+  //ARQUIVOS - se não conseguir criar e inserir mostra mensagem de erro de processamento de arquivo
+  if (!fileDidOpen(indexFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  }
+
+  long referenciaDoRegistro = searchRegisterReference(searchValue, indexFileReference);
+
+  // Se não encontrado retornar 0
+  if(referenciaDoRegistro == -1) 
+  {// registro removido
+    printf("Registro inexistente.\n");
+    return 0;
+  }
+
+  // Registro encontrado
+
+  // cria um registro de linha vazio
+  line_t* lineRegister = createLineRegister();
+  
+  // vai ate a posicao adequado no arquivo de dados
+  fseek(tableFileReference, referenciaDoRegistro, SEEK_SET);
+  // Verificar se foi removido
+  char campoRemovido;
+  fread(&campoRemovido, sizeof(char), 1, tableFileReference);
+  if (campoRemovido == '0')
+  {// registro removido
+    printf("Registro inexistente.\n");
+    return 0;
+  }
+  
+  setRemovidoLine(lineRegister, campoRemovido);
+  readLineRegisterBIN(tableFileReference, lineRegister);
+
+  printLineRegister(lineRegister);
+
+  //libera estruturas
+  freeLineRegister(lineRegister);
+  
+  //fecha arquivos
+  fclose(tableFileReference);
+  fclose(indexFileReference);
+
+  return 1;
 }
 
 int keyIsHere(int key, noArvoreB_t* currentNode) 

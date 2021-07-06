@@ -6,3 +6,4 @@ typedef struct noArvoreB noArvoreB_t;
 
 int createIndex(char* tableFileName, char* indexFileName);
 int sgdbVehicles(char* tableFileName, char* indexFileName, char* searchValue); 
+int sgdbLines(char* tableFileName, char* indexFileName, int searchValue);

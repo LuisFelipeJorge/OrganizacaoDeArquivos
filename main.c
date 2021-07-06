@@ -22,6 +22,7 @@ int main(int argc, char const *argv[])
     char campo[STRING_SIZE/2];
     char valor[STRING_SIZE/2];
     int numberOfNewRegisters;
+    int codLinha;
 
     //menu pra escolher qual função vai executar
     switch (escolhaDafuncao)
@@ -192,6 +193,16 @@ int main(int argc, char const *argv[])
         // buscar pelo registro
         sgdbVehicles(tableFileName, indexFileName, valor);
         
+
+        case 12:
+        getFileName(tableFileName);
+        getFileName(indexFileName); 
+
+        scanf("%s", campo);
+        scanf("%d", &codLinha);
+
+        // buscar pelo registro
+        sgdbLines(tableFileName, indexFileName, codLinha);
         default:
             break;
     }
