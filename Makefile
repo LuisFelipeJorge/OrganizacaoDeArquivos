@@ -1,7 +1,7 @@
 CFLAGS = -Wall -Werror
 TARGET = programa1
-OBJECTFILES = veiculos.o linhas.o arquivos.o main.o
-CFILES = main.c veiculos.c linhas.c arquivos.c
+OBJECTFILES = index.o veiculos.o linhas.o arquivos.o main.o
+CFILES = main.c veiculos.c linhas.c arquivos.c index.c
 
 all: $(TARGET)
 

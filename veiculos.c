@@ -59,10 +59,10 @@ struct vehicle
 
 void freeVehicleHeaderFields(char **header, int numberOfFields);
 void freeVehicleHeader(cabecalhoVeiculo_t* cabecalhoVeiculo);
-char* readVehicleRegister(FILE* dataFileReference, vehicle_t* vehicleRegister);
-int calculateTamanhoDoRegistroVeiculo(vehicle_t* vehicleRegister);
-void writeVehicleRegister(FILE* tableFileReference,vehicle_t* vehicleRegister);
-void freeVehicleRegister(vehicle_t* vehicleRegister);
+// char* readVehicleRegister(FILE* dataFileReference, vehicle_t* vehicleRegister);
+// int calculateTamanhoDoRegistroVeiculo(vehicle_t* vehicleRegister);
+// void writeVehicleRegister(FILE* tableFileReference,vehicle_t* vehicleRegister);
+// void freeVehicleRegister(vehicle_t* vehicleRegister);
 cabecalhoVeiculo_t* createVehicleHeader();
 void insertVehicleHeaderDataInStructure(
   char status,
@@ -73,22 +73,21 @@ void insertVehicleHeaderDataInStructure(
   cabecalhoVeiculo_t* cabecalhoVeiculo
 );
 void writeVehicleHeader(FILE* tableFileReference, cabecalhoVeiculo_t* cabecalhoVeiculo);
-void getDataNula(char* data);
-int isNullVehicleRegister(FILE* tableFileReference);
-void jumpVehicleHeader(FILE* tableFileReference);
-char* getFormatedDate(char* date);
-void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* vehicleRegister);
-void readVehicleRegistersFromBinaryTableWithCondition(
-  FILE* tableFileReference, 
-  vehicle_t* vehicleRegister, 
-  char* fieldName, 
-  char* value
-);
-void readVehicleRegisterBIN(FILE* tableFileReference, vehicle_t* vehicleRegister);
-void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,char* value);
-void setByteOffset(FILE* tableFileReference, long long byteOffset);
-int getNroDeRegistros(FILE* tableFileReference);
-void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
+// void getDataNula(char* data);
+// int isNullVehicleRegister(FILE* tableFileReference);
+// void jumpVehicleHeader(FILE* tableFileReference);
+// char* getFormatedDate(char* date);
+// void readVehicleRegistersFromBinaryTable(FILE* tableFileReference);
+// void readVehicleRegistersFromBinaryTableWithCondition(
+//   FILE* tableFileReference,  
+//   char* fieldName, 
+//   char* value
+// );
+// void readVehicleRegisterBIN(FILE* tableFileReference, vehicle_t* vehicleRegister);
+// void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,char* value);
+// void setByteOffset(FILE* tableFileReference, long long byteOffset);
+// int getNroDeRegistros(FILE* tableFileReference);
+// void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Definição da Funções
@@ -384,12 +383,8 @@ void selectVehicleRegistersFrom(char* tableFileName)
     //pula o cabecalho
     jumpVehicleHeader(tableFileReference);
     
-    // cria um registro de veiculos vazio
-    vehicle_t* vehicleRegister = createVehicleRegister();
-    // usa o registro de veiculos para ler a tabela de registros de veiculos
-    readVehicleRegistersFromBinaryTable(tableFileReference, vehicleRegister);
-
-    freeVehicleRegister(vehicleRegister);
+    // lê a tabela de registros de veiculos
+    readVehicleRegistersFromBinaryTable(tableFileReference);
   }
 
   fclose(tableFileReference);
@@ -403,16 +398,21 @@ int isNullVehicleRegister(FILE* tableFileReference)
   return (byteProxRegistro <= HEADER_SIZE+1);
 }
 
-void readVehicleRegistersFromBinaryTable(FILE* tableFileReference, vehicle_t* vehicleRegister)
+void readVehicleRegistersFromBinaryTable(FILE* tableFileReference)
 {
-  //le apenas se o registro n tiver sido marcado como apagado
-  while ( fread(vehicleRegister->removido, sizeof(char), 1, tableFileReference) != 0)
+  // cria um registro de veiculos vazio
+  vehicle_t* vehicleRegister = createVehicleRegister();
+
+  // enquanto houver bytes para serem lidos continue printando
+  while (fread(vehicleRegister->removido, sizeof(char), 1, tableFileReference) != 0)
   {
     //le cada registro 
     readVehicleRegisterBIN(tableFileReference, vehicleRegister);
     //imprime o que foi lido de forma organizada    
     printVehicleRegister(vehicleRegister);
   }
+  
+  freeVehicleRegister(vehicleRegister);
 }
 
 void readVehicleRegisterBIN(FILE* tableFileReference, vehicle_t* vehicleRegister)
@@ -564,15 +564,11 @@ void selectVehicleRegistersFromWhere(char* tableFileName, char* fieldName, char*
   {
     jumpVehicleHeader(tableFileReference);
 
-    vehicle_t* vehicleRegister = createVehicleRegister();
     readVehicleRegistersFromBinaryTableWithCondition(
       tableFileReference, 
-      vehicleRegister, 
       fieldName, 
       value
     );
-
-    freeVehicleRegister(vehicleRegister);
   }
 
   fclose(tableFileReference);
@@ -581,17 +577,20 @@ void selectVehicleRegistersFromWhere(char* tableFileName, char* fieldName, char*
 void readVehicleRegistersFromBinaryTableWithCondition
 (
   FILE* tableFileReference, 
-  vehicle_t* vehicleRegister,
   char* fieldName,
   char* value
 )
 {
+  vehicle_t* vehicleRegister = createVehicleRegister();
+
   while ( fread(vehicleRegister->removido, sizeof(char), 1, tableFileReference) != 0)
   {
     readVehicleRegisterBIN(tableFileReference, vehicleRegister);    
 
     printVehicleRegisterSelectedBy(vehicleRegister, fieldName, value);
   }
+
+  freeVehicleRegister(vehicleRegister);
 }
 
 void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,char* value)
@@ -674,4 +673,18 @@ int insertVehicleRegisterIntoTable(
   fclose(tableFileReference);
 
   return 1;
+}
+
+
+//////////////////////////////////////////////////////////
+// funçoes para manter o tad fechado e auxiliar à arvore B
+
+char* getPrefixo(vehicle_t* vehicleRegister)
+{
+  return vehicleRegister->prefixo;
+}
+
+void setRemovido(vehicle_t* vehicleRegister, char campoRemovido)
+{
+  vehicleRegister->removido[0] = campoRemovido;
 }
