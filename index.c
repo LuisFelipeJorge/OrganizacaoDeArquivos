@@ -62,7 +62,7 @@ void freeIndexHeader(cabecalhoIndice_t* header);
 void insertIndexHeaderDataInStructure(char status, int raiz, int proxRRN, cabecalhoIndice_t* header);
 void writeIndexHeader(FILE* tableFileReference, cabecalhoIndice_t* header);
 int createVehicleIndex(char* tableFileName, char* indexFileName);
-int insertIndexRecursive(
+void insertIndexRecursive(
   int* newKey,
   long* referenciaDoArquivoDeDados,
   int* pDireito,
@@ -70,7 +70,6 @@ int insertIndexRecursive(
   int* proxNo, 
   FILE* indexFileReference
 );
-
 noArvoreB_t* createBtreeNode();
 chaves_t* createChave();
 void freeNode(noArvoreB_t* node);
@@ -79,11 +78,33 @@ int hasSpace(noArvoreB_t* node);
 int getRRNraiz(FILE* indexFileReference) ;
 noArvoreB_t* getNode(int RRN, FILE* indexFileReference);
 void readIndex(noArvoreB_t* node, FILE* indexFileReference);
-void insertSorted(int newKey,long referenciaDoArquivoDeDados, int pDireito, noArvoreB_t* currentNode);
 long searchRegisterReference(int key, FILE* indexFileReference);
 long searchRegisterReferenceRecursive(int currentRRN, int key, FILE* indexfileReference);
 chaves_t* searchKeyInsideIndex(int currentRRN, int key, noArvoreB_t* currentNode); 
 int keyIsHere(int key, noArvoreB_t* currentNode); 
+void insertIndex(int newKey, long referenciaDoArquivoDeDados , int* rootRRN, int* RRNproxNo, FILE* indexFileReference);
+void writeIndex(FILE* indexFileReference, noArvoreB_t* node);
+void insertIndexRecursive(
+  int* newKey,
+  long* referenciaDoArquivoDeDados,
+  int* ponteiroDireito,
+  int currentRRN, 
+  int* RRNproxNo, 
+  FILE* indexFileReference
+);
+noArvoreB_t* split(
+  noArvoreB_t* currentNode,
+  int newKey, 
+  int referenciaDoArquivoDeDados, 
+  int ponteiroDireito);
+void promocaoDeChave(
+  int* promotedKey, 
+  long* referenciaDoArquivoDeDados, 
+  int* ponteiroDireito, int proxNo, 
+  noArvoreB_t* newNode);
+void insertSortedInNode(int newKey,long referenciaDoArquivoDeDados, int pDireito,noArvoreB_t* currentNode);
+void insertSortedInArray(int newKey,long referenciaDoArquivoDeDados, int pDireito, chaves_t* chaves[], int ponteiros[]);
+int searchNextRRN(int key, noArvoreB_t* currentNode);
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 int createVehicleIndex(char* tableFileName, char* indexFileName){
@@ -118,9 +139,11 @@ int createVehicleIndex(char* tableFileName, char* indexFileName){
   // cria um registro de veiculos vazio
   vehicle_t* vehicleRegister = createVehicleRegister();
 
+
+  int noRaiz = -1;
+  int RRNproxNo = 0;
+  
   char campoRemovido;
-  int RRNraiz = -1;
-  int proxNo = 0;
   // enquanto houver bytes para serem lidos continue escrevendo
   while (fread(&campoRemovido, sizeof(char), 1, tableFileReference) != 0)
   {
@@ -133,20 +156,19 @@ int createVehicleIndex(char* tableFileName, char* indexFileName){
     {
       char* prefixo = getPrefixo(vehicleRegister);
       int newKey = convertePrefixo(prefixo);
-      insertIndex(newKey, referenciaNoArquivoDeDados , &RRNraiz, &proxNo, indexFileReference);
+      insertIndex(newKey, referenciaNoArquivoDeDados , &noRaiz, &RRNproxNo, indexFileReference);
     }
   }
   
-  freeVehicleRegister(vehicleRegister);
-
   //cria um ponteiro novo para o cabecalho do veiculo
   cabecalhoIndice_t* header = createIndexHeader();
-  // preechendo a estrutura cabeçalho com a informação colhida do arquivo csv
-  insertIndexHeaderDataInStructure('1', RRNraiz, proxNo, header);
+  insertIndexHeaderDataInStructure('1',noRaiz, RRNproxNo, header);
   // Com a estrutura completa, escrevemos ela dentro do arquivo binário
   writeIndexHeader(indexFileReference, header);
+  
   //libera estrutura
   freeIndexHeader(header);
+  freeVehicleRegister(vehicleRegister);
     
   //fecha arquivos
   fclose(tableFileReference);
@@ -200,68 +222,36 @@ void writeIndexHeader(FILE* indexFileReference, cabecalhoIndice_t* header){
 }
 
 
-void insertIndex(int newKey, long referenciaDoArquivoDeDados , int* RRNraiz, int* proxNo, FILE* indexFileReference)
+void insertIndex(int newKey, long referenciaDoArquivoDeDados , int* rootRRN, int* RRNproxNo, FILE* indexFileReference)
 {
+  int newP = -1;
 
-  if(treeIsEmpty(*RRNraiz))
-  { 
-    // situação da árvore vazia, devemos criar o primeiro nó
-    noArvoreB_t* rootNode = createBtreeNode();
-    insertSorted(newKey, referenciaDoArquivoDeDados, -1, rootNode);
+  insertIndexRecursive(&newKey, &referenciaDoArquivoDeDados, &newP, *rootRRN, RRNproxNo, indexFileReference);
 
-    *RRNraiz++;
-    fseek(indexFileReference, (*RRNraiz+1*REGISTER_SIZE), SEEK_SET); // +1 para pular o cabeçalho
-    writeIndex(indexFileReference, rootNode);
-
-    freeNode(rootNode);
-
-  }else
+  if (newKey != -1)
   {
-    noArvoreB_t* currentRoot =  createBtreeNode();
-    fseek(indexFileReference, (*RRNraiz+1)*REGISTER_SIZE, SEEK_SET);
-    readIndex(currentRoot, indexFileReference);
+    // necessário aumentar o nível da árvore
+    noArvoreB_t* newRoot = createBtreeNode();
+    insertSortedInNode(newKey, referenciaDoArquivoDeDados, newP, newRoot);
+    // nova rais 'aponta' para raiz anterior
+    newRoot->ponteiros[0] = *rootRRN;
+    newRoot->ponteiros[1] = newP;
+    // se a arvore estava fazia trata-se de uma raiz folha
+    newRoot->folha[0] = (*rootRRN == -1)? '1' : '0';
+    newRoot->RRNdoNo = *RRNproxNo;
 
-    // a nova chave nasce sem filhos a principio
-    int ponteiroDireito = -1;
-    if(hasSpace(currentRoot))
-    { // tendo espaço na raiz basta inserir da maneira convencional
-      insertIndexRecursive(&newKey, &referenciaDoArquivoDeDados, &ponteiroDireito, currentRoot->RRNdoNo, proxNo,indexFileReference);
-    }else
-    {
-      // Se a raiz não tem espaço disonível temos que saber quando aumentar a altura da arvore
-      if(insertIndexRecursive)
-      {
-        // promoção 
-        noArvoreB_t* newRoot = split(currentRoot, newKey, referenciaDoArquivoDeDados, ponteiroDireito);
-
-        // promoção da chave mais à esquerda da particao direita
-        promocaoDeChave(&newKey, &referenciaDoArquivoDeDados, &ponteiroDireito, *proxNo, newRoot);
-        
-        // Escrita no arquivo de índices
-        fseek(indexFileReference, (*proxNo+1)*REGISTER_SIZE, SEEK_SET);
-        writeIndex(indexFileReference, newRoot);
-        *RRNraiz = *proxNo;
-        *proxNo++;
-
-        freeNode(newRoot);  
-
-        fseek(indexFileReference , (currentRoot->RRNdoNo+1)*REGISTER_SIZE, SEEK_SET);
-        writeIndex(indexFileReference, currentRoot);
-      }
-    }
-    
-    freeNode(currentRoot);
+    // atualizando referencia prar no raiz e prox no
+    *rootRRN = *RRNproxNo;
+    *RRNproxNo += 1;
+    fseek(indexFileReference, (*rootRRN+1)*REGISTER_SIZE, SEEK_SET);
+    writeIndex(indexFileReference, newRoot);
+    free(newRoot);
   }
-}
-
-int treeIsEmpty(int root)
-{
-  return root == -1;
 }
 
 void writeIndex(FILE* indexFileReference, noArvoreB_t* node)
 {
-  fwrite(node->folha[0], sizeof(char), TAMANHO_FOLHA, indexFileReference);
+  fwrite(node->folha, sizeof(char), TAMANHO_FOLHA, indexFileReference);
   fwrite(&node->nroChavesIndexadas, sizeof(int), 1, indexFileReference);
   fwrite(&node->RRNdoNo, sizeof(int), 1, indexFileReference);
   for (int i = 0; i < M-1; i++)
@@ -273,52 +263,55 @@ void writeIndex(FILE* indexFileReference, noArvoreB_t* node)
   fwrite(&node->ponteiros[M-1], sizeof(int), 1, indexFileReference);
 }
 
-int insertIndexRecursive(
+void insertIndexRecursive(
   int* newKey,
   long* referenciaDoArquivoDeDados,
   int* ponteiroDireito,
   int currentRRN, 
-  int* proxNo, 
+  int* RRNproxNo, 
   FILE* indexFileReference
 ){
+
+  // caso base, sub-arvore vazia
+  if(currentRRN == -1) return;
+
   // encontrando o registro atual pelo RRN +1 (+1 para pular o header)
   fseek(indexFileReference, (currentRRN + 1)*REGISTER_SIZE, SEEK_SET);
-  
   noArvoreB_t* currentNode = createBtreeNode();
   readIndex(currentNode, indexFileReference);
 
+  // ainda nao chegamos na folha, devemos continuar procurando
+  // buscar pela chave na sub-árvore filha adequada
   int nextTree;
-  if (currentNode->folha[0] == '0') 
-  { 
-    // ainda nao chegamos na folha, devemos continuar procurando
-    // buscar pela chave na sub-árvore filha adequada
-    int nextTree = searchNextRRN(*newKey, currentNode);
-    freeNode(currentNode);
-    insertIndexRecursive(newKey, referenciaDoArquivoDeDados, ponteiroDireito, nextTree, proxNo, indexFileReference);
-  }
+  nextTree = searchNextRRN(*newKey, currentNode);
+  insertIndexRecursive(newKey, referenciaDoArquivoDeDados, ponteiroDireito, nextTree, RRNproxNo, indexFileReference);
 
   // caso base, quando a inserção e promoção ja foram realizadas e estamos voltando na pilha de recursao
-  if (*newKey == -1)  return 0; 
+  if (*newKey == -1) 
+  {
+    freeNode(currentNode);
+    return; 
+  }
   
   // INSERÇÃO 
 
   // verificar disponibilidade de espaço  
   if(hasSpace(currentNode))
   {// caso ajá espaço ná página 
-    insertSorted(newKey, referenciaDoArquivoDeDados, ponteiroDireito, currentNode);
+    insertSortedInNode(*newKey, *referenciaDoArquivoDeDados, *ponteiroDireito, currentNode);
     *newKey = -1;// fim da inserção
   } else
-  { // sem espaço: necessidade do split
-    // promoção 
-    noArvoreB_t* newNode = split(currentNode, newKey, referenciaDoArquivoDeDados, ponteiroDireito);
-
+  { // sem espaço: necessidade do SPLIT
+    // PROMOÇÃO
+    noArvoreB_t* newNode = split(currentNode, *newKey, *referenciaDoArquivoDeDados, *ponteiroDireito);
+    newNode->RRNdoNo = *RRNproxNo;
     // promoção da chave mais à esquerda da particao direita
-    promocaoDeChave(newKey, referenciaDoArquivoDeDados, ponteiroDireito, *proxNo, newNode);
+    promocaoDeChave(newKey, referenciaDoArquivoDeDados, ponteiroDireito, *RRNproxNo, newNode);
     
     // Escrita no arquivo de índices
-    fseek(indexFileReference, (*proxNo+1)*REGISTER_SIZE, SEEK_SET);
+    fseek(indexFileReference, (*RRNproxNo+1)*REGISTER_SIZE, SEEK_SET);
     writeIndex(indexFileReference, newNode);
-    *proxNo++;
+    *RRNproxNo += 1;
     freeNode(newNode);  
   }
 
@@ -327,7 +320,7 @@ int insertIndexRecursive(
   freeNode(currentNode);
 
   // houve promoção
-  return 1;
+  return;
 }
 
 noArvoreB_t* createBtreeNode() 
@@ -347,7 +340,7 @@ noArvoreB_t* createBtreeNode()
   }
   newNode->ponteiros[M-1] = -1;
 
-  newNode->folha[0] = '1';
+  newNode->folha[0] = '0';
   newNode->nroChavesIndexadas = 0;
   newNode->RRNdoNo = -1;
 
@@ -445,30 +438,63 @@ noArvoreB_t* split(
   int referenciaDoArquivoDeDados, 
   int ponteiroDireito) 
 {
+  // vetores auxiliares com tamanho igual à capacidade max +1, para se insereir o novo elemento
+  // inserir de maneira ordenada neles para nao precisar se preocupar em descobrir se a nova chave 
+  // deverá ser posicionada na arvore esquerda ou na arvore direita do nó
+  chaves_t* chaves[M]; 
+  for (int i = 0; i < M; i++)
+  {
+    chaves[i] = createChave();
+  }
+  
+  int ponteiros[M+1];
+  for (int i = 0; i < M-1; i++)
+  {
+    chaves[i]->c = currentNode->chaves[i]->c;
+    chaves[i]->pr = currentNode->chaves[i]->pr;
+    ponteiros[i] = currentNode->ponteiros[i];
+  }
+  ponteiros[M-1] = currentNode->ponteiros[M-1];
+  insertSortedInArray(newKey, referenciaDoArquivoDeDados, ponteiroDireito, chaves, ponteiros);
+
+  // sobrescrever os valores no nó tual e no novo que sera criados
+
+  // criar o novo nó que recebe as M-1/2 + 1 chaves mais à direita
   noArvoreB_t* newNode = createBtreeNode();
   int ocupacaoMin = (M-1)/2;
-  for (int i = 0; i < ocupacaoMin; i++)
+  for (int i = 0; i <= ocupacaoMin; i++)
   {
     // passando as chaves e as referencias para o nó à direita
-    newNode->chaves[i]->c = currentNode->chaves[i+ocupacaoMin]->c;
-    newNode->chaves[i]->pr = currentNode->chaves[i+ocupacaoMin]->pr;
-    // apagando as chaves e referencias da pagina à esquerdsa
-    currentNode->chaves[i+ocupacaoMin]->c = EMPTY_FIELD;
-    currentNode->chaves[i+ocupacaoMin]->pr = EMPTY_FIELD;
-
+    newNode->chaves[i]->c = chaves[i+ocupacaoMin]->c;
+    newNode->chaves[i]->pr = chaves[i+ocupacaoMin]->pr;
     // mesmo processo com os ponteiros
-    newNode->ponteiros[i] = currentNode->ponteiros[i+ocupacaoMin+1];
-    currentNode->ponteiros[i+ocupacaoMin+1] = EMPTY_FIELD;
+    newNode->ponteiros[i] = ponteiros[i+ocupacaoMin+1];
+    newNode->nroChavesIndexadas++;
   }
 
-  insertSorted(newKey, referenciaDoArquivoDeDados, ponteiroDireito, newNode);
-  
+  // chave original recebe os (M-1)/2 filhos mais à esquerda
+  // resetando as chaves e referencias que não pertencem mais 
+  // à página esquerda (-1s)
+  for (int i = 0; i < ocupacaoMin; i++)
+  {
+    currentNode->chaves[i]->c = chaves[i]->c;
+    currentNode->chaves[i]->pr = chaves[i]->pr;
+    currentNode->ponteiros[i] = ponteiros[i];
+
+    currentNode->chaves[i+ocupacaoMin]->c = EMPTY_FIELD;
+    currentNode->chaves[i+ocupacaoMin]->pr = EMPTY_FIELD;
+    currentNode->ponteiros[i+ocupacaoMin+1] = EMPTY_FIELD;
+    currentNode->nroChavesIndexadas--;
+  }  
+  currentNode->ponteiros[currentNode->nroChavesIndexadas] = ponteiros[currentNode->nroChavesIndexadas];
+
+  newNode->folha[0] =  (currentNode->folha[0] == '1')? '1' : '0';
   return newNode;
 }
 
 void promocaoDeChave(
   int* promotedKey, 
-  int* referenciaDoArquivoDeDados, 
+  long* referenciaDoArquivoDeDados, 
   int* ponteiroDireito, int proxNo, 
   noArvoreB_t* newNode)
 {
@@ -483,9 +509,10 @@ void promocaoDeChave(
     newNode->chaves[idxChaves]->pr = newNode->chaves[idxChaves+1]->pr;
     idxChaves++;
   }
+  newNode->nroChavesIndexadas--;
 }
 
-void insertSorted(int newKey,long referenciaDoArquivoDeDados, int pDireito,noArvoreB_t* currentNode)
+void insertSortedInNode(int newKey,long referenciaDoArquivoDeDados, int pDireito,noArvoreB_t* currentNode)
 {  
   // inserindo a nova chave ordenadamente, acompanhada da referencia do arquivo de dados
   // inspirado no algoritmo insertion sort
@@ -502,12 +529,36 @@ void insertSorted(int newKey,long referenciaDoArquivoDeDados, int pDireito,noArv
 
   // 'shiftando' os ponteiros das subarvores da direita uma unidade ->
   int idxPonteiros = currentNode->nroChavesIndexadas-1;
-  while (idxPonteiros >= idxChaves+1) 
+  while (idxPonteiros > idxChaves+1) 
   { // shiftar até a posição em que a nova chave foi inserida
     currentNode->ponteiros[idxPonteiros+1] = currentNode->ponteiros[idxPonteiros];
     idxPonteiros--;
   }
   currentNode->ponteiros[idxPonteiros+1] = pDireito;
+}
+
+void insertSortedInArray(int newKey,long referenciaDoArquivoDeDados, int pDireito, chaves_t* chaves[], int ponteiros[])
+{  
+  // inserindo a nova chave ordenadamente, acompanhada da referencia do arquivo de dados
+  // inspirado no algoritmo insertion sort
+  // trate-se de um "shift pra direita" dos elementos ate achar a posição correta da nova chave
+  int idxChaves = M - 2;
+  while (idxChaves >= 0 && chaves[idxChaves]->c > newKey) {
+    chaves[idxChaves+1]->c = chaves[idxChaves]->c;
+    chaves[idxChaves+1]->pr = chaves[idxChaves]->pr;
+    idxChaves--;
+  }
+  chaves[idxChaves+1]->c = newKey;
+  chaves[idxChaves+1]->pr = referenciaDoArquivoDeDados;
+
+  // 'shiftando' os ponteiros das subarvores da direita uma unidade ->
+  int idxPonteiros = M-1;
+  while (idxPonteiros > idxChaves+1) 
+  { // shiftar até a posição em que a nova chave foi inserida
+    ponteiros[idxPonteiros+1] = ponteiros[idxPonteiros];
+    idxPonteiros--;
+  }
+  ponteiros[idxPonteiros+1] = pDireito;
 }
 
 int sgdbVehicles(char* tableFileName, char* indexFileName, char* searchValue) 

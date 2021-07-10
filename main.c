@@ -176,33 +176,40 @@ int main(int argc, char const *argv[])
 
             break;
 
-        // case 9:
-        // getFileName(tableFileName);
-        // getFileName(indexFileName); 
+        case 9:
+            getFileName(tableFileName);
+            getFileName(indexFileName); 
 
-        // //mostra o arquivo binario na tela apenas se conseguir criar a tabela
-        // createIndex(tableFileName, indexFileName);
+            //mostra o arquivo binario na tela apenas se conseguir criar a tabela
+            if(createVehicleIndex(tableFileName, indexFileName))
+            {
+                binarioNaTela(indexFileName);
+            }
+            break;
 
         case 11:
-        getFileName(tableFileName);
-        getFileName(indexFileName); 
+            getFileName(tableFileName);
+            getFileName(indexFileName); 
 
-        scanf("%s", campo);
-        scan_quote_string(valor);
+            scanf("%s", campo);
+            scan_quote_string(valor);
 
-        // buscar pelo registro
-        sgdbVehicles(tableFileName, indexFileName, valor);
-        
+            // buscar pelo registro
+            sgdbVehicles(tableFileName, indexFileName, valor);
+
+            break;
 
         case 12:
-        getFileName(tableFileName);
-        getFileName(indexFileName); 
+            getFileName(tableFileName);
+            getFileName(indexFileName); 
 
-        scanf("%s", campo);
-        scanf("%d", &codLinha);
+            scanf("%s", campo);
+            scanf("%d", &codLinha);
 
-        // buscar pelo registro
-        sgdbLines(tableFileName, indexFileName, codLinha);
+            // buscar pelo registro
+            sgdbLines(tableFileName, indexFileName, codLinha);
+            break;
+
         default:
             break;
     }
