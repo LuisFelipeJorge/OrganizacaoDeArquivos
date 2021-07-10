@@ -73,21 +73,7 @@ void insertVehicleHeaderDataInStructure(
   cabecalhoVeiculo_t* cabecalhoVeiculo
 );
 void writeVehicleHeader(FILE* tableFileReference, cabecalhoVeiculo_t* cabecalhoVeiculo);
-// void getDataNula(char* data);
-// int isNullVehicleRegister(FILE* tableFileReference);
-// void jumpVehicleHeader(FILE* tableFileReference);
-// char* getFormatedDate(char* date);
-// void readVehicleRegistersFromBinaryTable(FILE* tableFileReference);
-// void readVehicleRegistersFromBinaryTableWithCondition(
-//   FILE* tableFileReference,  
-//   char* fieldName, 
-//   char* value
-// );
-// void readVehicleRegisterBIN(FILE* tableFileReference, vehicle_t* vehicleRegister);
-// void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,char* value);
-// void setByteOffset(FILE* tableFileReference, long long byteOffset);
-// int getNroDeRegistros(FILE* tableFileReference);
-// void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Definição da Funções
@@ -632,7 +618,7 @@ void printVehicleRegisterSelectedBy(vehicle_t* vehicleRegister, char* fieldName,
   }
 }
 
-int insertVehicleRegisterIntoTable(
+int insertVehicleRegistersIntoTable(
   char* tableFileName, 
   vehicle_t** vehicleRegisters, 
   int numberOfRegisters
@@ -675,7 +661,6 @@ int insertVehicleRegisterIntoTable(
   return 1;
 }
 
-
 //////////////////////////////////////////////////////////
 // funçoes para manter o tad fechado e auxiliar à arvore B
 
@@ -687,4 +672,29 @@ char* getPrefixo(vehicle_t* vehicleRegister)
 void setRemovidoVehicle(vehicle_t* vehicleRegister, char campoRemovido)
 {
   vehicleRegister->removido[0] = campoRemovido;
+}
+
+int insertVehicleRegisterIntoTable(
+  FILE* tableFileReference, 
+  vehicle_t* vehicleRegister, 
+  long* lastResgisterInserted
+)
+{
+  if(isNullVehicleRegister(tableFileReference))
+  { 
+    printf("Registro inexistente.\n");
+    return 0; 
+  } 
+  goToFileEnd(tableFileReference);
+  *lastResgisterInserted = ftell(tableFileReference);
+  writeVehicleRegister(tableFileReference, vehicleRegister);
+
+  long long newByteOffset = ftell(tableFileReference);
+  setByteOffset(tableFileReference, newByteOffset);
+
+  int newNroDeRegistros = getNroDeRegistros(tableFileReference);
+  newNroDeRegistros++;
+  setNroDeRegistros(tableFileReference, newNroDeRegistros);
+
+  return 1;
 }

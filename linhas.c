@@ -43,10 +43,6 @@ struct line
   int tamanhoCor;
 };
 
-
-
-void jumpLineHeader(FILE* tableFileReference);
-char* readLineRegister(FILE* dataFileReference, line_t* lineRegister);
 void writeLineRegister(FILE* tableFileReference, line_t* lineRegister);
 int calculateTamanhoDoRegistroLinha(line_t* lineRegister);
 cabecalhoLinha_t* createLineHeader();
@@ -461,7 +457,7 @@ void printLineRegisterSelectedBy(line_t* lineRegister, char* fieldName,char* val
   }
 }
 
-int insertLineRegisterIntoTable(
+int insertLineRegistersIntoTable(
   char* tableFileName, 
   line_t** lineRegisters, 
   int numberOfRegisters
@@ -508,7 +504,38 @@ int insertLineRegisterIntoTable(
 //////////////////////////////////////////////////////////
 // funçoes para manter o tad fechado e auxiliar à arvore B
 
+int getCodLinha(line_t* lineRegister)
+{
+  return lineRegister->codigoLinha;
+}
+
 void setRemovidoLine(line_t* lineRegister, char campoRemovido)
 {
   lineRegister->removido[0] = campoRemovido;
+}
+
+
+int insertLineRegisterIntoTable(
+  FILE* tableFileReference, 
+  line_t* lineRegister, 
+  long* lastResgisterInserted
+)
+{
+  if(isNullLineRegister(tableFileReference))
+  { 
+    printf("Registro inexistente.\n");
+    return 0; 
+  } 
+  goToFileEnd(tableFileReference);
+  *lastResgisterInserted = ftell(tableFileReference);
+  writeLineRegister(tableFileReference, lineRegister);
+
+  long long newByteOffset = ftell(tableFileReference);
+  setByteOffset(tableFileReference, newByteOffset);
+
+  int newNroDeRegistros = getNroDeRegistros(tableFileReference);
+  newNroDeRegistros++;
+  setNroDeRegistros(tableFileReference, newNroDeRegistros);
+
+  return 1;
 }

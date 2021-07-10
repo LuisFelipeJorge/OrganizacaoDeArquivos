@@ -8,7 +8,7 @@ void printVehicleRegister(vehicle_t* vehicleRegister);
 int createVehicleTable(char *dataFileName, char *tableFileName);
 void selectVehicleRegistersFrom(char* tableFileName);
 void selectVehicleRegistersFromWhere(char* tableFileName, char* fieldName, char* value);
-int insertVehicleRegisterIntoTable(char* tableFileName, vehicle_t** vehicleRegisters, int numberOfRegisters);
+int insertVehicleRegistersIntoTable(char* tableFileName, vehicle_t** vehicleRegisters, int numberOfRegisters);
 
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -34,3 +34,9 @@ void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
 
 char* getPrefixo(vehicle_t* vehicleRegister);
 void setRemovidoVehicle(vehicle_t* vehicleRegister, char campoRemovido);
+
+int insertVehicleRegisterIntoTable(
+  FILE* tableFileReference, 
+  vehicle_t* vehicleRegisters, 
+  long* lastResgisterInserted
+);

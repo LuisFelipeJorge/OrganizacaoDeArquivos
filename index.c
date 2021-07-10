@@ -40,28 +40,20 @@ struct noArvoreB
   int ponteiros[M];
 };
 
-
-/////////////////////////////////////
-
-// vetor C =   [A, B, D, F]
-// vetor P = [0, 1, 2, 3, 4]
-
-// ao se promover uma chave, acompanhamos sempre o p da DIREITA.
-
-
-// fun(*a)
-//   a+10
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Funções auxiliares para o manuseio dos dados
+// Cabeçalho
+
 
 cabecalhoIndice_t* createIndexHeader();
 void jumpIndexHeader(FILE* indexFileReference);
 void freeIndexHeader(cabecalhoIndice_t* header);
 void insertIndexHeaderDataInStructure(char status, int raiz, int proxRRN, cabecalhoIndice_t* header);
 void writeIndexHeader(FILE* tableFileReference, cabecalhoIndice_t* header);
+// veiculo
 int createVehicleIndex(char* tableFileName, char* indexFileName);
+
+// indice
 void insertIndexRecursive(
   int* newKey,
   long* referenciaDoArquivoDeDados,
@@ -75,7 +67,8 @@ chaves_t* createChave();
 void freeNode(noArvoreB_t* node);
 void freeChave(chaves_t* chave); 
 int hasSpace(noArvoreB_t* node);
-int getRRNraiz(FILE* indexFileReference) ;
+int getRRNraiz(FILE* indexFileReference);
+int getRRNproxNo(FILE* indexFileReference);
 noArvoreB_t* getNode(int RRN, FILE* indexFileReference);
 void readIndex(noArvoreB_t* node, FILE* indexFileReference);
 long searchRegisterReference(int key, FILE* indexFileReference);
@@ -105,6 +98,7 @@ void promocaoDeChave(
 void insertSortedInNode(int newKey,long referenciaDoArquivoDeDados, int pDireito,noArvoreB_t* currentNode);
 void insertSortedInArray(int newKey,long referenciaDoArquivoDeDados, int pDireito, chaves_t* chaves[], int ponteiros[]);
 int searchNextRRN(int key, noArvoreB_t* currentNode);
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 int createVehicleIndex(char* tableFileName, char* indexFileName){
@@ -112,7 +106,7 @@ int createVehicleIndex(char* tableFileName, char* indexFileName){
   // abre o arquivo da tabela de veiculos para leitura
   FILE* tableFileReference = fopen(tableFileName, "r");   
   //ARQUIVOS - se não conseguir abrir mostra mensagem de erro de processamento de arquivo
-  if(!fileDidOpen(tableFileReference))
+  if(!fileDidOpen(tableFileReference) || isFileCorrupted(tableFileReference))
   {
     printf("Falha no processamento do arquivo.\n");
     return 0;
@@ -176,6 +170,76 @@ int createVehicleIndex(char* tableFileName, char* indexFileName){
 
   return 1;
 }
+
+int createLineIndex(char* tableFileName, char* indexFileName){
+  
+  // abre o arquivo da tabela de veiculos para leitura
+  FILE* tableFileReference = fopen(tableFileName, "r");   
+  //ARQUIVOS - se não conseguir abrir mostra mensagem de erro de processamento de arquivo
+  if(!fileDidOpen(tableFileReference) || isFileCorrupted(tableFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  } 
+
+  //cria o arquivo para insercao de índices e o abre para escrita
+  FILE* indexFileReference = fopen(indexFileName, "wb+");
+  //ARQUIVOS - se não conseguir criar e inserir mostra mensagem de erro de processamento de arquivo
+  if (!fileDidOpen(indexFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  }
+  
+  //ARQUIVOS - insere o status do arquivo de abertura como 0, para verificar que o arquivo foi manuseado de forma
+  // adequada 
+  setStatus(indexFileReference, '0');
+
+  //LINHAs - seta o ponteiro do arquivo para depois do header do arquivo de linhas
+  jumpLineHeader(tableFileReference);
+  //INDICES - seta o ponteiro do arquivo para depois do header do arquivo de índices
+  jumpIndexHeader(indexFileReference);
+
+  // cria um registro de veiculos vazio
+  line_t* lineRegister = createLineRegister();
+
+
+  int noRaiz = -1;
+  int RRNproxNo = 0;
+  
+  char campoRemovido;
+  // enquanto houver bytes para serem lidos continue escrevendo
+  while (fread(&campoRemovido, sizeof(char), 1, tableFileReference) != 0)
+  {
+    long referenciaNoArquivoDeDados = ftell(tableFileReference)-1;
+
+    //le cada registro 
+    setRemovidoLine(lineRegister, campoRemovido);
+    readLineRegisterBIN(tableFileReference, lineRegister);
+    if (campoRemovido != '0')
+    {
+      int newKey = getCodLinha(lineRegister);
+      insertIndex(newKey, referenciaNoArquivoDeDados , &noRaiz, &RRNproxNo, indexFileReference);
+    }
+  }
+  
+  //cria um ponteiro novo para o cabecalho do veiculo
+  cabecalhoIndice_t* header = createIndexHeader();
+  insertIndexHeaderDataInStructure('1',noRaiz, RRNproxNo, header);
+  // Com a estrutura completa, escrevemos ela dentro do arquivo binário
+  writeIndexHeader(indexFileReference, header);
+  
+  //libera estrutura
+  freeIndexHeader(header);
+  freeLineRegister(lineRegister);
+    
+  //fecha arquivos
+  fclose(tableFileReference);
+  fclose(indexFileReference);
+
+  return 1;
+}
+
 
 cabecalhoIndice_t* createIndexHeader(){
   cabecalhoIndice_t* newHeader = (cabecalhoIndice_t*)malloc(sizeof(cabecalhoIndice_t));
@@ -422,6 +486,16 @@ int getRRNraiz(FILE* indexFileReference)
   return RRNraiz;
 }
 
+int getRRNproxNo(FILE* indexFileReference)
+{
+  // pular o status e RRNraiz
+  fseek(indexFileReference, sizeof(char)+sizeof(int), SEEK_SET);
+
+  int RRNproxNo;
+  fread(&RRNproxNo, sizeof(int), 1, indexFileReference);
+  return RRNproxNo;
+}
+
 noArvoreB_t* getNode(int RRN, FILE* indexFileReference)
 {
   fseek(indexFileReference, REGISTER_SIZE*RRN+1, SEEK_SET); // +1 para pular o cabeçalho
@@ -443,10 +517,11 @@ noArvoreB_t* split(
   // deverá ser posicionada na arvore esquerda ou na arvore direita do nó
   chaves_t* chaves[M]; 
   for (int i = 0; i < M; i++)
-  {
+  { // incializando valores para evitar segfault
     chaves[i] = createChave();
   }
   
+  // recebe todos os elementos do no cheio + a nova chave e o novo ponteiro
   int ponteiros[M+1];
   for (int i = 0; i < M-1; i++)
   {
@@ -457,9 +532,9 @@ noArvoreB_t* split(
   ponteiros[M-1] = currentNode->ponteiros[M-1];
   insertSortedInArray(newKey, referenciaDoArquivoDeDados, ponteiroDireito, chaves, ponteiros);
 
-  // sobrescrever os valores no nó tual e no novo que sera criados
+  // sobrescrever os valores na pagina atual e na nova que sera criada
 
-  // criar o novo nó que recebe as M-1/2 + 1 chaves mais à direita
+  // criação do novo nó que recebe as M-1/2 + 1 chaves mais à direita
   noArvoreB_t* newNode = createBtreeNode();
   int ocupacaoMin = (M-1)/2;
   for (int i = 0; i <= ocupacaoMin; i++)
@@ -489,6 +564,12 @@ noArvoreB_t* split(
   currentNode->ponteiros[currentNode->nroChavesIndexadas] = ponteiros[currentNode->nroChavesIndexadas];
 
   newNode->folha[0] =  (currentNode->folha[0] == '1')? '1' : '0';
+
+  for (int i = 0; i < M; i++)
+  {
+    freeChave(chaves[i]);
+  }
+
   return newNode;
 }
 
@@ -737,4 +818,118 @@ int keyIsHere(int key, noArvoreB_t* currentNode)
     if(currentNode->chaves[i]->c == key) return 1;
   }
   return 0;
+}
+
+int insertNewVehicleRegisters(
+  char* indexFileName, 
+  char* tableFileName,
+  vehicle_t** vehicleRegisters, 
+  int numberOfRegisters
+)
+{
+  FILE* indexFileReference = fopen(indexFileName, "rb+");
+  if(!fileDidOpen(indexFileReference) 
+    || isFileCorrupted(indexFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  }
+
+  setStatus(indexFileReference, '0');
+
+  FILE* tableFileReference = fopen(tableFileName, "rb+");
+  if(!fileDidOpen(tableFileReference) 
+    || isFileCorrupted(tableFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  }
+
+  setStatus(tableFileReference, '0');
+
+ 
+  int noRaiz = getRRNraiz(indexFileReference);
+  int RRNproxNo = getRRNproxNo(indexFileReference);
+  for (int i = 0; i < numberOfRegisters; i++)
+  {
+    // insere o novo registro no arquivo de dados e recupera a referencia de onde foi inserido
+    long referenciaNoArquivoDeDados;
+    if(!insertVehicleRegisterIntoTable(tableFileReference, vehicleRegisters[i], &referenciaNoArquivoDeDados)) return 0;
+    
+
+    char* prefixo = getPrefixo(vehicleRegisters[i]);
+    int newKey = convertePrefixo(prefixo);
+    insertIndex(newKey, referenciaNoArquivoDeDados , &noRaiz, &RRNproxNo, indexFileReference);
+  }
+ 
+  // atualizar as informações do cabeçalho
+  cabecalhoIndice_t* newHeader = createIndexHeader();
+  insertIndexHeaderDataInStructure('1', noRaiz, RRNproxNo, newHeader);
+  writeIndexHeader(indexFileReference, newHeader);
+
+  freeIndexHeader(newHeader);
+
+  fclose(indexFileReference);
+
+  setStatus(tableFileReference, '1');
+  fclose(tableFileReference);
+
+  return 1;
+}
+
+
+int insertNewLineRegisters(
+  char* indexFileName, 
+  char* tableFileName,
+  line_t** lineRegisters, 
+  int numberOfRegisters
+)
+{
+  
+  FILE* indexFileReference = fopen(indexFileName, "rb+");
+  if(!fileDidOpen(indexFileReference) 
+    || isFileCorrupted(indexFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  }
+
+  setStatus(indexFileReference, '0');
+
+  FILE* tableFileReference = fopen(tableFileName, "rb+");
+  if(!fileDidOpen(tableFileReference) 
+    || isFileCorrupted(tableFileReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  }
+
+  setStatus(tableFileReference, '0');
+
+ 
+  int noRaiz = getRRNraiz(indexFileReference);
+  int RRNproxNo = getRRNproxNo(indexFileReference);
+  for (int i = 0; i < numberOfRegisters; i++)
+  {
+    // insere o novo registro no arquivo de dados e recupera a referencia de onde foi inserido
+    long referenciaNoArquivoDeDados;
+    if(!insertLineRegisterIntoTable(tableFileReference, lineRegisters[i], &referenciaNoArquivoDeDados)) return 0;
+    
+    int newKey = getCodLinha(lineRegisters[i]);
+    insertIndex(newKey, referenciaNoArquivoDeDados , &noRaiz, &RRNproxNo, indexFileReference);
+  }
+ 
+  // atualizar as informações do cabeçalho
+  cabecalhoIndice_t* newHeader = createIndexHeader();
+  insertIndexHeaderDataInStructure('1', noRaiz, RRNproxNo, newHeader);
+  writeIndexHeader(indexFileReference, newHeader);
+
+  freeIndexHeader(newHeader);
+
+  fclose(indexFileReference);
+
+  setStatus(tableFileReference, '1');
+  fclose(tableFileReference);
+
+  return 1;
 }
