@@ -453,8 +453,6 @@ void printVehicleRegister(vehicle_t* vehicleRegister)
     {
       printf("Quantidade de lugares sentados disponiveis: campo com valor nulo\n");
     }
-
-    printf("\n");
   }
 }
 
@@ -672,6 +670,11 @@ char* getPrefixo(vehicle_t* vehicleRegister)
 void setRemovidoVehicle(vehicle_t* vehicleRegister, char campoRemovido)
 {
   vehicleRegister->removido[0] = campoRemovido;
+}
+
+int getCodLinhaVeiculo(vehicle_t* vehicleRegister)
+{
+  return vehicleRegister->codigoLinha;
 }
 
 int insertVehicleRegisterIntoTable(

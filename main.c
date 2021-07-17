@@ -6,13 +6,14 @@
 #include "veiculos.h"
 #include "linhas.h"
 #include "index.h"
+#include "merge.h"
 
 #define STRING_SIZE 50
 
-void readNewVehicleRegister();
+void readNewVehicleRegisters();
 void freeNewVehicleRegisters(int numberOfNewRegisters, vehicle_t** newVehicleRegisters);
 
-void readNewLineRegister(int numberOfNewRegisters, line_t** newLineRegisters);
+void readNewLineRegisters(int numberOfNewRegisters, line_t** newLineRegisters);
 void freeNewLineRegisters(int numberOfNewRegisters, line_t** newLineRegisters);
 
 int main(int argc, char const *argv[])
@@ -96,47 +97,14 @@ int main(int argc, char const *argv[])
             
             //aloca uma matriz para armazenar os registros dos novos veiculos
             vehicle_t** newVehicleRegisters = (vehicle_t**)malloc(sizeof(vehicle_t*));
-            //aloca uma matriz para armazenar os dados de cada veiculo novo
-            char** vehicleDataFields = (char**)malloc(sizeof(char*)*NUMBER_OF_COLUMNS_VEHICLE);
-            for(int j=0; j < NUMBER_OF_COLUMNS_VEHICLE; j++){
-                vehicleDataFields[j] = (char*)malloc(sizeof(char)*(STRING_SIZE));
-            }
-
-            for (int i = 0; i < numberOfNewRegisters; i++)
-            {
-                // cria uma registro novo para cada iteração
-                newVehicleRegisters[i] = createVehicleRegister();
-                // garante que em todas as iterações começamos com os valores zerados
-                // isso é necessário devido ao comportamento da strcpy, que altera apenas os bytes novos da string
-                // e mantem os valores da iteração passada
-                resetStrings(vehicleDataFields, NUMBER_OF_COLUMNS_VEHICLE, STRING_SIZE);
-
-                scan_quote_string(vehicleDataFields[0]);
-                scan_quote_string(vehicleDataFields[1]);
-                scan_quote_string(vehicleDataFields[2]);
-                scan_quote_string(vehicleDataFields[3]);
-                scan_quote_string(vehicleDataFields[4]);
-                scan_quote_string(vehicleDataFields[5]);
-
-                // fazer ficar igual ao csv, para nao precisar alterar a logica do TAD veiculos
-                vehicleDataFields[5][strlen(vehicleDataFields[5])] = '\n';
-                // corrigir logica de scanquote, 
-                // necessario add o \0 para o funcionamento adequado das funções printf e da string.h
-                vehicleDataFields[5][strlen(vehicleDataFields[5])] = '\0';
-                insertVehicleDataInStructure((char**)vehicleDataFields, newVehicleRegisters[i]);
-            }
+            readNewVehicleRegisters(numberOfNewRegisters, newVehicleRegisters);
+            
 
             if(insertVehicleRegistersIntoTable(tableFileName, newVehicleRegisters, numberOfNewRegisters))
             {
                 binarioNaTela(tableFileName);
             }
-
-            for (int i = 0; i < numberOfNewRegisters; i++)
-            {
-                free(newVehicleRegisters[i]);
-            }
-            free(newVehicleRegisters);
-
+            freeNewVehicleRegisters(numberOfNewRegisters, newVehicleRegisters);
             break;
         
         // Permita a inserção de novos registros no arquivo de entrada linhas.bin ao final do arquivo de dados.
@@ -146,39 +114,14 @@ int main(int argc, char const *argv[])
             scanf("%d", &numberOfNewRegisters);
 
             line_t** newLineRegisters = (line_t**)malloc(sizeof(line_t*));
-            char** lineDataFields = (char**)malloc(sizeof(char*)*NUMBER_OF_COLUMNS_LINES);
-            for(int j=0; j < NUMBER_OF_COLUMNS_LINES; j++){
-                lineDataFields[j] = (char*)malloc(sizeof(char)*(STRING_SIZE));
-            }
-
-            for (int i = 0; i < numberOfNewRegisters; i++)
-            {
-                newLineRegisters[i] = createLineRegister();
-
-                resetStrings(lineDataFields, NUMBER_OF_COLUMNS_LINES, STRING_SIZE);
-                
-                scanf("%s", lineDataFields[0]);
-                scan_quote_string(lineDataFields[1]);
-                scan_quote_string(lineDataFields[2]);
-                scan_quote_string(lineDataFields[3]);
-
-                // fazer ficar igual ao csv
-                lineDataFields[3][strlen(lineDataFields[3])] = '\n';
-                // corrigir logica de scanquote
-                lineDataFields[3][strlen(lineDataFields[3])] = '\0';
-                insertLineDataInStructure((char**)lineDataFields, newLineRegisters[i]);
-            }
-
+            readNewLineRegisters(numberOfNewRegisters, newLineRegisters);
+            
             if(insertLineRegistersIntoTable(tableFileName, newLineRegisters, numberOfNewRegisters))
             {
                 binarioNaTela(tableFileName);
             }
 
-            for (int i = 0; i < numberOfNewRegisters; i++)
-            {
-                free(newLineRegisters[i]);
-            }
-            free(newLineRegisters);
+            freeNewLineRegisters(numberOfNewRegisters, newLineRegisters);
 
             break;
 
@@ -234,7 +177,7 @@ int main(int argc, char const *argv[])
             
             //aloca uma matriz para armazenar os registros dos novos veiculos
             vehicle_t** newVehicleRegistersForIndex = (vehicle_t**)malloc(sizeof(vehicle_t*));
-            readNewVehicleRegister(numberOfNewRegisters, newVehicleRegistersForIndex);
+            readNewVehicleRegisters(numberOfNewRegisters, newVehicleRegistersForIndex);
 
             if(insertNewVehicleRegisters(indexFileName, tableFileName, newVehicleRegistersForIndex, numberOfNewRegisters))
             {
@@ -253,7 +196,7 @@ int main(int argc, char const *argv[])
             
             //aloca uma matriz para armazenar os registros das novas linhas
             line_t** newLineRegistersForIndex = (line_t**)malloc(sizeof(line_t*));
-            readNewLineRegister(numberOfNewRegisters, newLineRegistersForIndex);
+            readNewLineRegisters(numberOfNewRegisters, newLineRegistersForIndex);
 
             if(insertNewLineRegisters(indexFileName, tableFileName, newLineRegistersForIndex, numberOfNewRegisters))
             {
@@ -262,6 +205,14 @@ int main(int argc, char const *argv[])
 
             freeNewLineRegisters(numberOfNewRegisters, newLineRegistersForIndex);
 
+            break;
+
+        case 15:
+            getFileName(tableFileName);
+            getFileName(indexFileName);
+            scanf("%s %s", campo, valor);
+            selectFromJoinBruto(tableFileName, indexFileName);
+            
             break;
 
 
@@ -273,7 +224,7 @@ int main(int argc, char const *argv[])
 }
 
 
-void readNewVehicleRegister(int numberOfNewRegisters, vehicle_t** newVehicleRegisters)
+void readNewVehicleRegisters(int numberOfNewRegisters, vehicle_t** newVehicleRegisters)
 {
     //aloca uma matriz para armazenar os dados de cada veiculo novo
     char** vehicleDataFields = (char**)malloc(sizeof(char*)*NUMBER_OF_COLUMNS_VEHICLE);
@@ -321,7 +272,7 @@ void freeNewVehicleRegisters(int numberOfNewRegisters, vehicle_t** newVehicleReg
 
 
 
-void readNewLineRegister(int numberOfNewRegisters, line_t** newLineRegisters)
+void readNewLineRegisters(int numberOfNewRegisters, line_t** newLineRegisters)
 {
     //aloca uma matriz para armazenar os dados de cada veiculo novo
     char** lineDataFields = (char**)malloc(sizeof(char*)*NUMBER_OF_COLUMNS_LINES);

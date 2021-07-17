@@ -17,3 +17,4 @@ void setByteOffset(FILE* tableFileReference, long long byteOffset);
 int getNroDeRegistros(FILE* tableFileReference);
 void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
 void resetStrings(char **fields, int numberOfFields, int stringsSize);
+int isRegisterRemoved(char campoRemovido);

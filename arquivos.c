@@ -232,3 +232,8 @@ void resetStrings(char **fields, int numberOfFields, int stringsSize)
     }
   }
 }
+
+int isRegisterRemoved(char campoRemovido)
+{
+  return (campoRemovido == '0');
+}

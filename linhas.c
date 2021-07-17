@@ -371,8 +371,6 @@ void printLineRegister(line_t* lineRegister)
     {
       printf("Aceita cartao: campo com valor nulo\n");
     }
-
-    printf("\n");
   }
 }
 
