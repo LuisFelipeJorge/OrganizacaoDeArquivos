@@ -71,7 +71,6 @@ int getRRNraiz(FILE* indexFileReference);
 int getRRNproxNo(FILE* indexFileReference);
 noArvoreB_t* getNode(int RRN, FILE* indexFileReference);
 void readIndex(noArvoreB_t* node, FILE* indexFileReference);
-long searchRegisterReference(int key, FILE* indexFileReference);
 long searchRegisterReferenceRecursive(int currentRRN, int key, FILE* indexfileReference);
 chaves_t* searchKeyInsideIndex(int currentRRN, int key, noArvoreB_t* currentNode); 
 int keyIsHere(int key, noArvoreB_t* currentNode); 

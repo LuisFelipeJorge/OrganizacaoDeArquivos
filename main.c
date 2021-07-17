@@ -215,7 +215,15 @@ int main(int argc, char const *argv[])
             
             break;
 
+        case 16:
+            getFileName(tableFileName);
+            getFileName(dataFileName);
+            scanf("%s %s", campo, valor);
+            getFileName(indexFileName);
 
+            selectFromJoinPorIndice(tableFileName, dataFileName, indexFileName);
+            
+            break;
         default:
             break;
     }

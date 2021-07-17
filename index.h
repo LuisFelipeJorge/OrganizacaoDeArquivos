@@ -19,3 +19,4 @@ int insertNewLineRegisters(
   line_t** lineRegisters, 
   int numberOfRegisters
 );
+long searchRegisterReference(int key, FILE* indexFileReference);
