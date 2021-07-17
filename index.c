@@ -141,6 +141,8 @@ int createVehicleIndex(char* tableFileName, char* indexFileName){
   // enquanto houver bytes para serem lidos continue escrevendo
   while (fread(&campoRemovido, sizeof(char), 1, tableFileReference) != 0)
   {
+    // voltar 1 byte para pegar a referencia desde o inicio do registro
+    // contendo o campo removido que foi lido na verificação do loop;
     long referenciaNoArquivoDeDados = ftell(tableFileReference)-1;
 
     //le cada registro 
@@ -288,12 +290,14 @@ void writeIndexHeader(FILE* indexFileReference, cabecalhoIndice_t* header){
 
 void insertIndex(int newKey, long referenciaDoArquivoDeDados , int* rootRRN, int* RRNproxNo, FILE* indexFileReference)
 {
+  // todo novo nó nasce sem filhos
   int newP = -1;
 
   insertIndexRecursive(&newKey, &referenciaDoArquivoDeDados, &newP, *rootRRN, RRNproxNo, indexFileReference);
 
   if (newKey != -1)
   {
+    // Há uma promoção pendente, logo é
     // necessário aumentar o nível da árvore
     noArvoreB_t* newRoot = createBtreeNode();
     insertSortedInNode(newKey, referenciaDoArquivoDeDados, newP, newRoot);
@@ -724,7 +728,7 @@ long searchRegisterReferenceRecursive(int currentRRN, int key, FILE* indexfileRe
 
   chaves_t* chaveBuscada = searchKeyInsideIndex(currentRRN, key, currentNode);
 
-  // se a chave foi encontrada, retorna a referência apropriada do arq
+  // se a chave foi encontrada, retorna a referência apropriada do arquivo
   if(chaveBuscada != NULL) 
   {
     long referenciaDoRegistro = chaveBuscada->pr;
@@ -813,6 +817,8 @@ int sgdbLines(char* tableFileName, char* indexFileName, int searchValue)
 
 int keyIsHere(int key, noArvoreB_t* currentNode) 
 {
+  // se alguma das chaves for igual à key buscada retorna true (1)
+  // caso contrario false (0)
   for (int i = 0; i < currentNode->nroChavesIndexadas; i++)
   {
     if(currentNode->chaves[i]->c == key) return 1;
@@ -870,7 +876,7 @@ int insertNewVehicleRegisters(
   freeIndexHeader(newHeader);
 
   fclose(indexFileReference);
-
+  // ocorrendo tudo de acordo, resetar o status para 1 ao fim da função
   setStatus(tableFileReference, '1');
   fclose(tableFileReference);
 
