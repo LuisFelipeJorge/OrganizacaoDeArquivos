@@ -215,10 +215,24 @@ int getNroDeRegistros(FILE* tableFileReference)
   return nroDeRegistros;
 }
 
+int getNroDeRegistrosRemovidos(FILE* tableFileReference)
+{
+  int nroDeRegistrosRemovidos;
+  fseek(tableFileReference, 13, SEEK_SET);
+  fread(&nroDeRegistrosRemovidos, sizeof(int), 1,tableFileReference);
+  return nroDeRegistrosRemovidos;
+}
+
 void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros)
 {
   fseek(tableFileReference, 9, SEEK_SET);
   fwrite(&nroDeRegistros, sizeof(int), 1, tableFileReference);
+}
+
+void setNroDeRegistrosRemovidos(FILE* tableFileReference, int nroDeRegistrosRemovidos)
+{
+  fseek(tableFileReference, 13, SEEK_SET);
+  fwrite(&nroDeRegistrosRemovidos, sizeof(int), 1, tableFileReference);
 }
 
 

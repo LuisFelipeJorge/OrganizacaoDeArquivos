@@ -26,7 +26,7 @@
 // definindo como deve ser considerado um campo do tipo int nulo
 #define NULL_FIELD_INT -1
 
-typedef struct cabecalhoVeiculo
+struct cabecalhoVeiculo
 {
   char status[TAMANHO_STATUS];
   long long int byteProxReg;
@@ -38,7 +38,7 @@ typedef struct cabecalhoVeiculo
   char descreveLinha[TAMANHO_DESCREVE_LINHA+1];
   char descreveModelo[TAMANHO_DESCREVE_MODELO+1];
   char descreveCategoria[TAMANHO_DESCREVE_CATEGORIA+1];
-}cabecalhoVeiculo_t;
+};
 
 struct vehicle
 {
@@ -58,23 +58,24 @@ struct vehicle
 // Funções auxiliares para o tratamento dos registros de veículos
 
 void freeVehicleHeaderFields(char **header, int numberOfFields);
-void freeVehicleHeader(cabecalhoVeiculo_t* cabecalhoVeiculo);
-// char* readVehicleRegister(FILE* dataFileReference, vehicle_t* vehicleRegister);
-// int calculateTamanhoDoRegistroVeiculo(vehicle_t* vehicleRegister);
-// void writeVehicleRegister(FILE* tableFileReference,vehicle_t* vehicleRegister);
-// void freeVehicleRegister(vehicle_t* vehicleRegister);
-cabecalhoVeiculo_t* createVehicleHeader();
-void insertVehicleHeaderDataInStructure(
-  char status,
-  long long byteProxRegistro,
-  char** headerFields,
-  int nroRegistros, 
-  int nroRegRemovidos, 
-  cabecalhoVeiculo_t* cabecalhoVeiculo
+char* readVehicleRegister(FILE* dataFileReference, vehicle_t* vehicleRegister);
+int calculateTamanhoDoRegistroVeiculo(vehicle_t* vehicleRegister);
+void getDataNula(char* data);
+int isNullVehicleRegister(FILE* tableFileReference);
+char* getFormatedDate(char* date);
+void readVehicleRegistersFromBinaryTable(FILE* tableFileReference);
+void readVehicleRegistersFromBinaryTableWithCondition(
+  FILE* tableFileReference,  
+  char* fieldName, 
+  char* value
 );
-void writeVehicleHeader(FILE* tableFileReference, cabecalhoVeiculo_t* cabecalhoVeiculo);
 
-
+vehicle_t** sortVehicleRegisters(FILE* tableVehicleReference);
+void constructVehicleRegisterArray(FILE* tableVehicleReference, vehicle_t** array);
+int compareVehicles(const void* v1, const void* v2);
+void freeSortedVehicleRegister(vehicle_t** array, int arraySize);
+void writeSortedVehicleTable(vehicle_t** array, int arraySize, FILE* fileReference, cabecalhoVeiculo_t* header);
+void copyVehicleRegister(vehicle_t* destination, vehicle_t* source);
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Definição da Funções
 
@@ -157,7 +158,13 @@ void jumpVehicleHeader(FILE* tableFileReference)
 //Veiculos - cria um ponteiro do tipo cabecalhoVeiculo que é uma struct e aloca apenas o tamanho na memoria de um cabecalho 
 vehicle_t* createVehicleRegister()
 {
-  return (vehicle_t*)malloc(sizeof(vehicle_t));
+  vehicle_t* newVehicle = (vehicle_t*)malloc(sizeof(vehicle_t));
+  if (newVehicle == NULL)
+  {
+    perror("Falha em alocar memoria para veiculo");
+    exit(EXIT_FAILURE);
+  }
+  return newVehicle;
 }
 
 void freeVehicleHeaderFields(char **header, int numberOfFields)
@@ -308,7 +315,14 @@ void writeVehicleRegister(FILE* tableFileReference,vehicle_t* vehicleRegister)
 
 cabecalhoVeiculo_t* createVehicleHeader()
 {
-  return (cabecalhoVeiculo_t*)malloc(sizeof(cabecalhoVeiculo_t));
+  cabecalhoVeiculo_t* newHeader = (cabecalhoVeiculo_t*)malloc(sizeof(cabecalhoVeiculo_t));
+  if (newHeader == NULL)
+  {
+    perror("Falha em alocar memoria");
+    exit(EXIT_FAILURE);
+  }
+  
+  return newHeader;
 }
 
 void insertVehicleHeaderDataInStructure(
@@ -460,7 +474,8 @@ char* getFormatedDate(char* date)
 {
   char** dateFields = splitString(date, 3, "-");
   int month = atoi(dateFields[1]);
-  char* dateString = (char*)malloc(sizeof(char)*(STRING_SIZE/4));
+  char* dateString = (char*)calloc((STRING_SIZE/4), sizeof(char));
+
   char monthName[10];
   switch (month)
   {
@@ -700,4 +715,129 @@ int insertVehicleRegisterIntoTable(
   setNroDeRegistros(tableFileReference, newNroDeRegistros);
 
   return 1;
+}
+
+
+int sortVehicleTable(char* tableVehicleName, char* sortedFileName)
+{
+  FILE* tableVehicleReference = fopen(tableVehicleName, "r");
+  if(!fileDidOpen(tableVehicleReference) || isFileCorrupted(tableVehicleReference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  }
+  
+  FILE* sortedReference = fopen(sortedFileName, "wb+");
+  if(!fileDidOpen(tableVehicleReference))
+  {
+    printf("Falha no carregamento do arquivo.\n");
+    return 0;
+  }
+
+  vehicle_t** sortedRegisters = sortVehicleRegisters(tableVehicleReference);
+
+  if (sortedRegisters == NULL)
+  {
+    printf("Falha no carregamento do arquivo.\n");
+    return 0;
+  }
+
+  int arraySize = getNroDeRegistros(tableVehicleReference);
+  cabecalhoVeiculo_t* originalHeader = getCabecalhoVeiculo(tableVehicleReference);
+  writeSortedVehicleTable(
+    sortedRegisters, 
+    arraySize, 
+    sortedReference, 
+    originalHeader
+  );
+
+  freeSortedVehicleRegister(sortedRegisters, arraySize);
+
+  fclose(tableVehicleReference);
+  fclose(sortedReference);
+  return 1;
+}
+
+vehicle_t** sortVehicleRegisters(FILE* tableVehicleReference)
+{
+  int arraySize = getNroDeRegistros(tableVehicleReference);
+  vehicle_t** sortedRegisters = (vehicle_t**)malloc(sizeof(vehicle_t*)*arraySize);
+  constructVehicleRegisterArray(tableVehicleReference, sortedRegisters);
+  qsort((void*)sortedRegisters, arraySize, sizeof(vehicle_t*), compareVehicles);
+  return sortedRegisters;
+}
+
+void constructVehicleRegisterArray(FILE* tableVehicleReference, vehicle_t** array)
+{
+  jumpVehicleHeader(tableVehicleReference);
+  vehicle_t* tempVehicle = createVehicleRegister();
+  int arraiIdx = 0;
+  while (fread(&tempVehicle->removido[0], sizeof(char), 1, tableVehicleReference) != 0)
+  {
+    readVehicleRegisterBIN(tableVehicleReference, tempVehicle);
+    if (!isRegisterRemoved(tempVehicle->removido[0]))
+    {
+      array[arraiIdx] = createVehicleRegister();
+      copyVehicleRegister(array[arraiIdx], tempVehicle);
+      arraiIdx++;
+    }
+  }
+}
+
+int compareVehicles(const void* v1, const void* v2)
+{
+  vehicle_t* register1 = *(vehicle_t**)v1;
+  vehicle_t* register2 = *(vehicle_t**)v2;   
+
+  int codLinha1 = getCodLinhaVeiculo(register1);
+  int codLinha2 = getCodLinhaVeiculo(register2);
+  return codLinha1 - codLinha2;
+}
+
+void freeSortedVehicleRegister(vehicle_t** array, int arraySize)
+{
+  for (int i = 0; i < arraySize; i++)
+  {
+    freeVehicleRegister(array[i]);
+  }
+  free(array);
+}
+
+cabecalhoVeiculo_t* getCabecalhoVeiculo(FILE* tableFileReference)
+{
+  cabecalhoVeiculo_t* header = createVehicleHeader();
+  
+  goToFileStart(tableFileReference);
+  fread(header->status, sizeof(char), 1, tableFileReference);
+  fread(&header->byteProxReg, sizeof(long long), 1, tableFileReference);
+  fread(&header->nroRegistros, sizeof(int), 1, tableFileReference);
+  fread(&header->nroRegRemovidos, sizeof(int), 1, tableFileReference);
+  fread(header->descrevePrefixo, sizeof(char), TAMANHO_DESCREVE_PREFIXO, tableFileReference);
+  fread(header->descreveData, sizeof(char), TAMANHO_DESCREVE_DATA, tableFileReference);
+  fread(header->descreveLugares, sizeof(char), TAMANHO_DESCREVE_LUGARES, tableFileReference);
+  fread(header->descreveLinha, sizeof(char), TAMANHO_DESCREVE_LINHA, tableFileReference);
+  fread(header->descreveModelo, sizeof(char), TAMANHO_DESCREVE_MODELO, tableFileReference);
+  fread(header->descreveCategoria, sizeof(char), TAMANHO_DESCREVE_CATEGORIA, tableFileReference);
+  return header;
+}
+
+void copyVehicleRegister(vehicle_t* destination, vehicle_t* source)
+{
+  memcpy(destination, source, sizeof(vehicle_t));
+}
+
+void writeSortedVehicleTable(vehicle_t** array, int arraySize, FILE* fileReference, cabecalhoVeiculo_t* header)
+{
+  writeVehicleHeader(fileReference, header);
+  
+  for (int i = 0; i < arraySize; i++)
+  {
+    writeVehicleRegister(fileReference, array[i]);
+  }
+
+  long long byteOffset = ftell(fileReference);
+  setStatus(fileReference, '1');
+  setByteOffset(fileReference, byteOffset);
+  setNroDeRegistros(fileReference, arraySize);
+  setNroDeRegistrosRemovidos(fileReference, 0);
 }

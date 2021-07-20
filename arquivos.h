@@ -18,3 +18,6 @@ int getNroDeRegistros(FILE* tableFileReference);
 void setNroDeRegistros(FILE* tableFileReference, int nroDeRegistros);
 void resetStrings(char **fields, int numberOfFields, int stringsSize);
 int isRegisterRemoved(char campoRemovido);
+
+int getNroDeRegistrosRemovidos(FILE* tableFileReference);
+void setNroDeRegistrosRemovidos(FILE* tableFileReference, int nroDeRegistrosRemovidos);

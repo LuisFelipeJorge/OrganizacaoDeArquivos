@@ -224,6 +224,18 @@ int main(int argc, char const *argv[])
             selectFromJoinPorIndice(tableFileName, dataFileName, indexFileName);
             
             break;
+            
+        case 17:
+            getFileName(tableFileName);
+            getFileName(dataFileName);
+            scanf("%s", campo);
+            
+            if(sortVehicleTable(tableFileName, dataFileName))
+            {
+                binarioNaTela(dataFileName);
+            }
+            
+            break;
         default:
             break;
     }
