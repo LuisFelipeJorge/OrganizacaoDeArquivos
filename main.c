@@ -248,6 +248,16 @@ int main(int argc, char const *argv[])
             }
             
             break;
+        
+        case 19:
+            getFileName(tableFileName);
+            getFileName(dataFileName);
+            scanf("%s %s", campo, valor);
+
+            selectFromJoinOrdenado(tableFileName, dataFileName);
+            
+            break;
+    
         default:
             break;
     }

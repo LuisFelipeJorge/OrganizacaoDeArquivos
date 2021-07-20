@@ -43,6 +43,9 @@ struct line
   int tamanhoCor;
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 void writeLineRegister(FILE* tableFileReference, line_t* lineRegister);
 int calculateTamanhoDoRegistroLinha(line_t* lineRegister);
 cabecalhoLinha_t* createLineHeader();
@@ -68,8 +71,6 @@ void readLineRegistersFromBinaryTableWithCondition
 );
 void printLineRegisterSelectedBy(line_t* lineRegister, char* fieldName,char* value);
 
-
-line_t** sortLineRegisters(FILE* tableLineReference);
 void constructLineRegisterArray(FILE* tableLineReference, line_t** array);
 int compareLines(const void* l1, const void* l2);
 void freeSortedLineRegister(line_t** array, int arraySize);
@@ -77,9 +78,7 @@ cabecalhoLinha_t* getCabecalhoLinha(FILE* tableFileReference);
 void copyLineRegister(line_t* destination, line_t* source);
 void writeSortedLineTable(line_t** array, int arraySize, FILE* fileReference, cabecalhoLinha_t* header);
 
-
-
-
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 int createLineTable(char *dataFileName, char* tableFileName)
 {

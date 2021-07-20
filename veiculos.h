@@ -45,3 +45,4 @@ void insertVehicleHeaderDataInStructure(
 cabecalhoVeiculo_t* getCabecalhoVeiculo(FILE* tableFileReference);
 int sortVehicleTable(char* tableVehicleName, char* sortedFileName);
 vehicle_t** sortVehicleRegisters(FILE* tableVehicleReference);
+void freeSortedVehicleRegister(vehicle_t** array, int arraySize);

@@ -29,3 +29,5 @@ int insertLineRegisterIntoTable(
 );
 
 int sortLineTable(char* tableLineName, char* sortedFileName);
+line_t** sortLineRegisters(FILE* tableLineReference);
+void freeSortedLineRegister(line_t** array, int arraySize);
