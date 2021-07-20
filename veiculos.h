@@ -42,7 +42,6 @@ void insertVehicleHeaderDataInStructure(
   int nroRegRemovidos, 
   cabecalhoVeiculo_t* cabecalhoVeiculo
 );
-void writeVehicleHeader(FILE* tableFileReference, cabecalhoVeiculo_t* cabecalhoVeiculo);
 cabecalhoVeiculo_t* getCabecalhoVeiculo(FILE* tableFileReference);
 int sortVehicleTable(char* tableVehicleName, char* sortedFileName);
-
+vehicle_t** sortVehicleRegisters(FILE* tableVehicleReference);

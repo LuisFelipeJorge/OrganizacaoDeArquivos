@@ -27,3 +27,5 @@ int insertLineRegisterIntoTable(
   line_t* lineRegister, 
   long* lastResgisterInserted
 );
+
+int sortLineTable(char* tableLineName, char* sortedFileName);

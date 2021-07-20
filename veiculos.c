@@ -56,7 +56,7 @@ struct vehicle
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Funções auxiliares para o tratamento dos registros de veículos
-
+void writeVehicleHeader(FILE* tableFileReference, cabecalhoVeiculo_t* cabecalhoVeiculo);
 void freeVehicleHeaderFields(char **header, int numberOfFields);
 char* readVehicleRegister(FILE* dataFileReference, vehicle_t* vehicleRegister);
 int calculateTamanhoDoRegistroVeiculo(vehicle_t* vehicleRegister);
@@ -70,7 +70,6 @@ void readVehicleRegistersFromBinaryTableWithCondition(
   char* value
 );
 
-vehicle_t** sortVehicleRegisters(FILE* tableVehicleReference);
 void constructVehicleRegisterArray(FILE* tableVehicleReference, vehicle_t** array);
 int compareVehicles(const void* v1, const void* v2);
 void freeSortedVehicleRegister(vehicle_t** array, int arraySize);

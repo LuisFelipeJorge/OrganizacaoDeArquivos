@@ -236,6 +236,18 @@ int main(int argc, char const *argv[])
             }
             
             break;
+
+        case 18:
+            getFileName(tableFileName);
+            getFileName(dataFileName);
+            scanf("%s", campo);
+            
+            if(sortLineTable(tableFileName, dataFileName))
+            {
+                binarioNaTela(dataFileName);
+            }
+            
+            break;
         default:
             break;
     }

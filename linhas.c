@@ -69,6 +69,15 @@ void readLineRegistersFromBinaryTableWithCondition
 void printLineRegisterSelectedBy(line_t* lineRegister, char* fieldName,char* value);
 
 
+line_t** sortLineRegisters(FILE* tableLineReference);
+void constructLineRegisterArray(FILE* tableLineReference, line_t** array);
+int compareLines(const void* l1, const void* l2);
+void freeSortedLineRegister(line_t** array, int arraySize);
+cabecalhoLinha_t* getCabecalhoLinha(FILE* tableFileReference);
+void copyLineRegister(line_t* destination, line_t* source);
+void writeSortedLineTable(line_t** array, int arraySize, FILE* fileReference, cabecalhoLinha_t* header);
+
+
 
 
 
@@ -536,4 +545,130 @@ int insertLineRegisterIntoTable(
   setNroDeRegistros(tableFileReference, newNroDeRegistros);
 
   return 1;
+}
+
+
+
+int sortLineTable(char* tableLineName, char* sortedFileName)
+{
+  FILE* tableLineference = fopen(tableLineName, "r");
+  if(!fileDidOpen(tableLineference) || isFileCorrupted(tableLineference))
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return 0;
+  }
+  
+  FILE* sortedReference = fopen(sortedFileName, "wb+");
+  if(!fileDidOpen(tableLineference))
+  {
+    printf("Falha no carregamento do arquivo.\n");
+    return 0;
+  }
+
+  line_t** sortedRegisters = sortLineRegisters(tableLineference);
+
+  if (sortedRegisters == NULL)
+  {
+    printf("Falha no carregamento do arquivo.\n");
+    return 0;
+  }
+
+  int arraySize = getNroDeRegistros(tableLineference);
+  cabecalhoLinha_t* originalHeader = getCabecalhoLinha(tableLineference);
+  writeSortedLineTable(
+    sortedRegisters, 
+    arraySize, 
+    sortedReference, 
+    originalHeader
+  );
+
+  freeSortedLineRegister(sortedRegisters, arraySize);
+
+  fclose(tableLineference);
+  fclose(sortedReference);
+  return 1;
+}
+
+line_t** sortLineRegisters(FILE* tableLineReference)
+{
+  int arraySize = getNroDeRegistros(tableLineReference);
+  line_t** sortedRegisters = (line_t**)malloc(sizeof(line_t*)*arraySize);
+  constructLineRegisterArray(tableLineReference, sortedRegisters);
+  qsort((void*)sortedRegisters, arraySize, sizeof(line_t*), compareLines);
+  return sortedRegisters;
+}
+
+void constructLineRegisterArray(FILE* tableLineReference, line_t** array)
+{
+  jumpLineHeader(tableLineReference);
+  line_t* tempLine = createLineRegister();
+  int arraiIdx = 0;
+  while (fread(&tempLine->removido[0], sizeof(char), 1, tableLineReference) != 0)
+  {
+    readLineRegisterBIN(tableLineReference, tempLine);
+    if (!isRegisterRemoved(tempLine->removido[0]))
+    {
+      array[arraiIdx] = createLineRegister();
+      copyLineRegister(array[arraiIdx], tempLine);
+      arraiIdx++;
+    }
+  }
+}
+
+int compareLines(const void* l1, const void* l2)
+{
+  line_t* register1 = *(line_t**)l1;
+  line_t* register2 = *(line_t**)l2;   
+
+  int codLinha1 = getCodLinha(register1);
+  int codLinha2 = getCodLinha(register2);
+  return codLinha1 - codLinha2;
+}
+
+void freeSortedLineRegister(line_t** array, int arraySize)
+{
+  for (int i = 0; i < arraySize; i++)
+  {
+    freeLineRegister(array[i]);
+  }
+  free(array);
+}
+
+cabecalhoLinha_t* getCabecalhoLinha(FILE* tableFileReference)
+{
+  cabecalhoLinha_t* header = createLineHeader();
+  
+  goToFileStart(tableFileReference);
+
+  fread(header->status, sizeof(char), 1, tableFileReference);
+  fread(&header->byteProxReg, sizeof(long long), 1, tableFileReference);
+  fread(&header->nroRegistros, sizeof(int), 1, tableFileReference);
+  fread(&header->nroRegRemovidos, sizeof(int), 1, tableFileReference);
+  fread(header->descreveCodigo, sizeof(char), TAMANHO_DESCREVE_CODIGO, tableFileReference);
+  fread(header->descreveCartao, sizeof(char), TAMANHO_DESCREVE_CARTAO, tableFileReference);
+  fread(header->descreveNome, sizeof(char), TAMANHO_DESCREVE_NOME, tableFileReference);
+  fread(header->descreveLinha, sizeof(char), TAMANHO_DESCREVE_LINHA, tableFileReference);
+
+  return header;
+}
+
+void copyLineRegister(line_t* destination, line_t* source)
+{
+  memcpy(destination, source, sizeof(line_t));
+}
+
+void writeSortedLineTable(line_t** array, int arraySize, FILE* fileReference, cabecalhoLinha_t* header)
+{
+  writeLineHeader(fileReference, header);
+  
+  for (int i = 0; i < arraySize; i++)
+  {
+    writeLineRegister(fileReference, array[i]);
+  }
+
+  long long byteOffset = ftell(fileReference);
+  setStatus(fileReference, '1');
+  setByteOffset(fileReference, byteOffset);
+  setNroDeRegistros(fileReference, arraySize);
+  setNroDeRegistrosRemovidos(fileReference, 0);
 }
